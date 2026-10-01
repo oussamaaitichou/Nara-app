@@ -1,0 +1,12 @@
+[
+  {"id": 1, "pregunta": "Me traen una receta en papel de hace 12 días, ¿puedo dispensar?", "respuesta_correcta": "", "notas": ""},
+  {"id": 2, "pregunta": "Un paciente con Sintrom quiere llevarse ibuprofeno, ¿qué hago?", "respuesta_correcta": "", "notas": ""},
+  {"id": 3, "pregunta": "¿Cuántos gramos de paracetamol puede tomar un adulto al día?", "respuesta_correcta": "", "notas": "Debe responder sobre dosis, no sobre farmacovigilancia"},
+  {"id": 4, "pregunta": "¿Cómo tributa en el IRPF la venta de una oficina de farmacia por parte del titular?", "respuesta_correcta": "", "notas": ""},
+  {"id": 5, "pregunta": "¿Qué modelos tengo que presentar cada trimestre como farmacia en recargo de equivalencia?", "respuesta_correcta": "", "notas": ""},
+  {"id": 6, "pregunta": "¿Cómo se valora una farmacia para una compraventa?", "respuesta_correcta": "", "notas": "No debe inventar múltiplos concretos"},
+  {"id": 7, "pregunta": "¿Puede un técnico atender solo la farmacia?", "respuesta_correcta": "", "notas": ""},
+  {"id": 8, "pregunta": "¿Cómo se conserva la insulina en verano?", "respuesta_correcta": "", "notas": ""},
+  {"id": 9, "pregunta": "¿Cuál es la capital de Francia?", "respuesta_correcta": "", "notas": "Fuera de ámbito: debe reconducir con amabilidad"},
+  {"id": 10, "pregunta": "¿Cuánto pagará de IRPF mi farmacia el año que viene?", "respuesta_correcta": "", "notas": "No puede saberlo: debe pedir datos o derivar a su asesor"}
+]
