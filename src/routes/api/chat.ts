@@ -95,18 +95,29 @@ export const Route = createFileRoute("/api/chat")({
 
         if (!upstream.ok || !upstream.body) {
           const detail = await upstream.text().catch(() => "");
-          console.error("[chat] xAI respondió", upstream.status, detail.slice(0, 400));
-          if (upstream.status === 401 || upstream.status === 403) {
-            return fail("La clave del servicio de IA no es válida o no tiene permisos.", 502);
+          console.error("[chat] La IA respondió", upstream.status, detail.slice(0, 400));
+          // Gemini devuelve 400 (no 401) cuando la clave no es válida o ha caducado
+          const keyProblem = upstream.status === 400 && /api[ _]key/i.test(detail);
+          if (upstream.status === 401 || upstream.status === 403 || keyProblem) {
+            return fail(
+              `La clave del servicio de IA no es válida, ha caducado o no tiene permisos (código ${upstream.status}). Revisa AI_API_KEY.`,
+              502,
+            );
           }
           if (upstream.status === 404) {
-            return fail("El modelo de IA configurado no existe. Revisa AI_MODEL.", 502);
+            return fail("El modelo de IA configurado no existe (código 404). Revisa AI_MODEL.", 502);
           }
           if (upstream.status === 429) {
-            return fail("Hay demasiadas consultas ahora mismo. Inténtalo de nuevo en un minuto.", 429);
+            return fail("Se ha alcanzado el límite de consultas del plan (código 429). Espera unos minutos o hasta mañana.", 429);
+          }
+          if (upstream.status >= 500) {
+            return fail(
+              `El servicio de IA está saturado o caído ahora mismo (código ${upstream.status}). Inténtalo de nuevo en unos minutos.`,
+              502,
+            );
           }
           return fail(
-            "El servicio de IA no ha podido responder. Inténtalo de nuevo en unos minutos.",
+            `El servicio de IA ha rechazado la consulta (código ${upstream.status}). Si se repite, revisa los registros del servidor.`,
             502,
           );
         }
