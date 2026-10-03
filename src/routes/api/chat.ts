@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { NARA_SYSTEM_PROMPT } from "@/lib/chat/knowledge";
-import { retrieve, formatContext, formatSources } from "@/lib/knowledge";
+import { retrieve, formatContext, formatSources, ESTILO } from "@/lib/knowledge";
 
 const MAX_MESSAGES = 16;
 const MAX_CHARS = 4000;
@@ -65,7 +65,10 @@ export const Route = createFileRoute("/api/chat")({
         const userTurns = trimmed.filter((m) => m.role === "user");
         const query = userTurns.slice(-2).map((m) => m.content).join(" ");
         const found = retrieve(query);
-        const systemPrompt = `${NARA_SYSTEM_PROMPT}\n\n${formatContext(found)}`;
+        const estiloBloque = ESTILO
+          ? `INSTRUCCIONES DE ESTILO (tienen prioridad sobre cualquier indicación anterior de formato o longitud; el bloque CIERRE OBLIGATORIO sigue vigente en todas las respuestas):\n${ESTILO}`
+          : "";
+        const systemPrompt = [NARA_SYSTEM_PROMPT, estiloBloque, formatContext(found)].filter(Boolean).join("\n\n");
         const sources = formatSources(found);
 
         let upstream: Response;

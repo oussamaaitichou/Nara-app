@@ -72,3 +72,17 @@ for (const file of files.sort()) {
 
 writeFileSync(out, JSON.stringify(chunks, null, 1) + "\n");
 console.log(`[conocimiento] ${files.length} documento(s), ${chunks.length} fragmento(s)`);
+
+// ---- Instrucciones de estilo: instrucciones/estilo.md -> src/lib/knowledge/instrucciones.json
+let estilo = "";
+try {
+  estilo = readFileSync(join(root, "instrucciones/estilo.md"), "utf8")
+    .replace(/<!--[\s\S]*?-->/g, "") // las notas entre <!-- --> no llegan a la IA
+    .replace(/^#\s+.*\n?/m, "") // quita el título principal
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+} catch {
+  // sin archivo: sin instrucciones extra
+}
+writeFileSync(join(root, "src/lib/knowledge/instrucciones.json"), JSON.stringify({ estilo }, null, 1) + "\n");
+console.log(`[instrucciones] estilo: ${estilo.length} caracteres`);

@@ -9,6 +9,10 @@
 Tus documentos van en `conocimiento/` (mira `README.md` y `_plantilla.md` de esa carpeta).
 Al reiniciar `npm run dev` se indexan solos y Nara los cita en sus respuestas.
 
+## Forma de responder
+El archivo `instrucciones/estilo.md` define cómo responde Nara (longitud, tono, criterios propios y ejemplos).
+Edítalo con el Bloc de notas, haz Commit y Push, y en unos minutos Nara responde así.
+
 ## Pruebas de calidad
 Rellena `evaluacion/preguntas.json` con la respuesta correcta de cada pregunta y, con la app en marcha,
 ejecuta `npm run eval`. Se genera `evaluacion/resultados.md` para revisar a mano.

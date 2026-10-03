@@ -1,3 +1,5 @@
+// Regenera el índice de conocimiento (conocimiento/*.md -> chunks.json) en cualquier dev o build
+import "./scripts/build-knowledge.mjs";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Plugin } from "vite";
