@@ -137,6 +137,9 @@ function MessageBubble({ message, streaming }: { message: ChatMessage; streaming
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
         ) : (
           <>
+            {streaming && !message.content ? (
+              <span className="mr-2 text-sm text-muted">Nara está pensando…</span>
+            ) : null}
             {message.content ? <Markdown text={message.content} /> : null}
             {streaming ? (
               <span className="mt-1 inline-block h-4 w-1.5 rounded-xs bg-teal align-middle animate-[nara-caret_1s_steps(1)_infinite]" />
@@ -268,16 +271,33 @@ export function ChatApp({
       .filter((m) => m.id !== assistantId && m.content)
       .map((m) => ({ role: m.role, content: m.content }));
 
+    // El texto que llega se muestra poco a poco (efecto de escritura), aunque el servidor lo mande en bloques.
     let raw = "";
+    let shown = 0;
+    const reveal = () => {
+      const pendiente = raw.length - shown;
+      if (pendiente <= 0) return;
+      shown += Math.min(pendiente, Math.max(3, Math.min(40, Math.ceil(pendiente / 10))));
+      const parsed = parseNaraPayload(raw.slice(0, shown));
+      patchMessage(conversationId, assistantId, {
+        content: parsed.content,
+        followUps: parsed.followUps,
+        escalate: parsed.escalate,
+      });
+    };
+    const timer = setInterval(reveal, 25);
     try {
       await streamNara(history, (token) => {
         raw += token;
-        const parsed = parseNaraPayload(raw);
-        patchMessage(conversationId, assistantId, {
-          content: parsed.content,
-          followUps: parsed.followUps,
-          escalate: parsed.escalate,
-        });
+      });
+      // esperar a que termine de escribirse lo que queda pendiente
+      await new Promise<void>((resolve) => {
+        const espera = setInterval(() => {
+          if (shown >= raw.length) {
+            clearInterval(espera);
+            resolve();
+          }
+        }, 25);
       });
       const parsed = parseNaraPayload(raw);
       patchMessage(conversationId, assistantId, {
@@ -291,6 +311,7 @@ export function ChatApp({
       patchMessage(conversationId, assistantId, { content: message, error: true });
       if ((err as { status?: number }).status === 401) void refrescarAcceso();
     } finally {
+      clearInterval(timer);
       setBusy(false);
       void refrescarAcceso();
       textareaRef.current?.focus();

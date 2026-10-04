@@ -20,6 +20,7 @@ const SSE_HEADERS = {
   "Content-Type": "text/event-stream; charset=utf-8",
   "Cache-Control": "no-cache, no-transform",
   Connection: "keep-alive",
+  "X-Accel-Buffering": "no",
 };
 
 export const Route = createFileRoute("/api/chat")({
@@ -106,65 +107,107 @@ export const Route = createFileRoute("/api/chat")({
           if (codigoId !== null) void devolverConsulta(codigoId).catch(() => undefined);
         };
 
-        let upstream: Response;
-        try {
-          upstream = await fetch(`${baseUrl}/chat/completions`, {
+        // Llamada a la IA con reintentos automáticos y modelo de reserva (para los "503: saturado" de Google)
+        const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+        const reservas = [model];
+        const modeloReserva = process.env.AI_FALLBACK_MODEL?.trim();
+        if (modeloReserva && modeloReserva !== model) reservas.push(modeloReserva);
+        const esGemini = baseUrl.includes("generativelanguage.googleapis.com");
+        // Menos "pensar" antes de responder = empieza a escribir antes. Con Gemini, "low" por defecto.
+        const esfuerzo = process.env.AI_REASONING_EFFORT?.trim() || (esGemini ? "low" : "");
+        const maxTokens = Number(process.env.AI_MAX_TOKENS) || 3000;
+
+        const llamar = (modelo: string, conEsfuerzo: boolean) =>
+          fetch(`${baseUrl}/chat/completions`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`,
-            },
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
             body: JSON.stringify({
-              model,
+              model: modelo,
               stream: true,
               temperature: 0.3,
-              max_tokens: Number(process.env.AI_MAX_TOKENS) || 3000,
+              ...(conEsfuerzo && esfuerzo ? { reasoning_effort: esfuerzo } : {}),
+              max_tokens: maxTokens,
               messages: [{ role: "system", content: systemPrompt }, ...trimmed],
             }),
             signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
           });
-        } catch (error) {
-          console.error("[chat] Fallo de conexión con la IA", error);
-          reembolsar();
-          return fail(
-            "No he podido conectar con el servicio de IA. Inténtalo de nuevo en unos minutos y, si es urgente, consulta la ficha técnica o al Colegio.",
-            502,
-          );
+
+        const esProblemaClave = (f: { status: number; detail: string }) =>
+          f.status === 401 || f.status === 403 || (f.status === 400 && /api[ _]key/i.test(f.detail));
+
+        let upstream: Response | null = null;
+        let ultimo: { status: number; detail: string } | "red" | null = null;
+        busqueda: for (const modelo of reservas) {
+          let conEsfuerzo = true;
+          let intentos = 0;
+          while (intentos < 2) {
+            intentos++;
+            let res: Response;
+            try {
+              res = await llamar(modelo, conEsfuerzo);
+            } catch (error) {
+              console.error("[chat] Fallo de conexión con la IA", modelo, error);
+              ultimo = "red";
+              if (intentos < 2) await esperar(700);
+              continue;
+            }
+            if (res.ok && res.body) {
+              upstream = res;
+              break busqueda;
+            }
+            const detail = await res.text().catch(() => "");
+            console.error("[chat] La IA respondió", res.status, modelo, detail.slice(0, 400));
+            ultimo = { status: res.status, detail };
+            // Si el modelo no admite el ajuste de razonamiento, se reintenta sin él (no cuenta como intento)
+            if (res.status === 400 && conEsfuerzo && esfuerzo && /reasoning|thinking/i.test(detail)) {
+              conEsfuerzo = false;
+              intentos--;
+              continue;
+            }
+            if (res.status >= 500) {
+              if (intentos < 2) await esperar(700);
+              continue;
+            }
+            break; // 429, 404, 400, 401, 403: no se reintenta con este modelo
+          }
+          if (ultimo && ultimo !== "red" && esProblemaClave(ultimo)) break; // con la clave mal, el modelo de reserva tampoco sirve
         }
 
-        if (!upstream.ok || !upstream.body) {
-          const detail = await upstream.text().catch(() => "");
-          console.error("[chat] La IA respondió", upstream.status, detail.slice(0, 400));
+        if (!upstream) {
           reembolsar();
-          // Gemini devuelve 400 (no 401) cuando la clave no es válida o ha caducado
-          const keyProblem = upstream.status === 400 && /api[ _]key/i.test(detail);
-          if (upstream.status === 401 || upstream.status === 403 || keyProblem) {
+          if (ultimo === "red" || ultimo === null) {
             return fail(
-              `La clave del servicio de IA no es válida, ha caducado o no tiene permisos (código ${upstream.status}). Revisa AI_API_KEY.`,
+              "No he podido conectar con el servicio de IA. Inténtalo de nuevo en unos minutos y, si es urgente, consulta la ficha técnica o al Colegio.",
               502,
             );
           }
-          if (upstream.status === 404) {
+          if (esProblemaClave(ultimo)) {
+            return fail(
+              `La clave del servicio de IA no es válida, ha caducado o no tiene permisos (código ${ultimo.status}). Revisa AI_API_KEY.`,
+              502,
+            );
+          }
+          if (ultimo.status === 404) {
             return fail("El modelo de IA configurado no existe (código 404). Revisa AI_MODEL.", 502);
           }
-          if (upstream.status === 429) {
+          if (ultimo.status === 429) {
             return fail("Se ha alcanzado el límite de consultas del plan (código 429). Espera unos minutos o hasta mañana.", 429);
           }
-          if (upstream.status >= 500) {
+          if (ultimo.status >= 500) {
             return fail(
-              `El servicio de IA está saturado o caído ahora mismo (código ${upstream.status}). Inténtalo de nuevo en unos minutos.`,
+              `El servicio de IA sigue saturado tras reintentarlo automáticamente (código ${ultimo.status}). Inténtalo de nuevo en un minuto.`,
               502,
             );
           }
           return fail(
-            `El servicio de IA ha rechazado la consulta (código ${upstream.status}). Si se repite, revisa los registros del servidor.`,
+            `El servicio de IA ha rechazado la consulta (código ${ultimo.status}). Si se repite, revisa los registros del servidor.`,
             502,
           );
         }
 
         const encoder = new TextEncoder();
         const decoder = new TextDecoder();
-        const reader = upstream.body.getReader();
+        const reader = upstream.body!.getReader();
         const send = (c: ReadableStreamDefaultController, payload: string) =>
           c.enqueue(encoder.encode(`data: ${payload}\n\n`));
 

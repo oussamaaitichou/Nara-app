@@ -11,7 +11,11 @@ export function parseNaraPayload(raw: string): {
 } {
   const match = raw.match(FENCE);
   if (!match) {
-    return { content: raw.trim(), followUps: [], escalate: null };
+    // Mientras se escribe, el bloque técnico final puede estar a medias: no se muestra.
+    const abierto = raw.search(/:::nara/i);
+    const visible = abierto === -1 ? raw : raw.slice(0, abierto);
+    const sinResto = visible.replace(/(?:\n\s*)?:{2,3}(?:n(?:a(?:r(?:a)?)?)?)?$/i, "");
+    return { content: sinResto.trim(), followUps: [], escalate: null };
   }
 
   let followUps: string[] = [];
