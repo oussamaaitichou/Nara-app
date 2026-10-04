@@ -9,6 +9,11 @@
 Tus documentos van en `conocimiento/` (mira `README.md` y `_plantilla.md` de esa carpeta).
 Al reiniciar `npm run dev` se indexan solos y Nara los cita en sus respuestas.
 
+## Acceso del piloto, valoraciones y panel
+Con `PILOTO_ACCESO=activo` (más `SESSION_SECRET`, `ADMIN_PASSWORD` y `DATABASE_URL`) solo entra quien tenga un código.
+En `/admin` creas los códigos (uno por farmacia, con límite de consultas al día) y revisas las valoraciones
+"Útil" e "Incorrecta". Sin esas variables, la app funciona abierta como siempre.
+
 ## Forma de responder
 El archivo `instrucciones/estilo.md` define cómo responde Nara (longitud, tono, criterios propios y ejemplos).
 Edítalo con el Bloc de notas, haz Commit y Push, y en unos minutos Nara responde así.

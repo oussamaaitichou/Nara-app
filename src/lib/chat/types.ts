@@ -8,6 +8,7 @@ export type ChatMessage = {
   content: string;
   followUps?: string[];
   escalate?: EscalateTo;
+  error?: boolean;
   createdAt: number;
 };
 

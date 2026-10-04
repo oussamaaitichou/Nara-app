@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { NARA_SYSTEM_PROMPT } from "@/lib/chat/knowledge";
 import { retrieve, formatContext, formatSources, ESTILO } from "@/lib/knowledge";
+import { accesoActivo, errorConfiguracion } from "@/lib/piloto/config.server";
+import { consumirConsulta, devolverConsulta } from "@/lib/piloto/db.server";
+import { sesionDe } from "@/lib/piloto/sesion.server";
 
 const MAX_MESSAGES = 16;
 const MAX_CHARS = 4000;
@@ -23,6 +26,21 @@ export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Acceso por código (solo si PILOTO_ACCESO=activo): sin sesión válida no se llega a la IA
+        let codigoId: number | null = null;
+        let generacion = 0;
+        if (accesoActivo()) {
+          const fallo = errorConfiguracion();
+          if (fallo) {
+            console.error("[chat] Acceso mal configurado:", fallo);
+            return fail("El acceso al piloto no está bien configurado.", 503);
+          }
+          const ses = await sesionDe(request);
+          if (!ses) return fail("Necesitas tu código de acceso para consultar a Nara.", 401);
+          codigoId = ses.cid;
+          generacion = ses.gen;
+        }
+
         let body: unknown;
         try {
           body = await request.json();
@@ -71,6 +89,23 @@ export const Route = createFileRoute("/api/chat")({
         const systemPrompt = [NARA_SYSTEM_PROMPT, estiloBloque, formatContext(found)].filter(Boolean).join("\n\n");
         const sources = formatSources(found);
 
+        if (codigoId !== null) {
+          try {
+            const consumo = await consumirConsulta(codigoId, generacion);
+            if (!consumo.ok) {
+              return consumo.motivo === "inactivo"
+                ? fail("Tu código de acceso está desactivado o ha cambiado. Contacta con quien te invitó al piloto.", 401)
+                : fail(`Has alcanzado el límite de ${consumo.limite} consultas de hoy. Mañana podrás seguir.`, 429);
+            }
+          } catch (error) {
+            console.error("[chat] Error al descontar la consulta", error);
+            return fail("No se ha podido comprobar tu acceso. Inténtalo de nuevo.", 503);
+          }
+        }
+        const reembolsar = () => {
+          if (codigoId !== null) void devolverConsulta(codigoId).catch(() => undefined);
+        };
+
         let upstream: Response;
         try {
           upstream = await fetch(`${baseUrl}/chat/completions`, {
@@ -89,7 +124,8 @@ export const Route = createFileRoute("/api/chat")({
             signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
           });
         } catch (error) {
-          console.error("[chat] Fallo de conexión con xAI", error);
+          console.error("[chat] Fallo de conexión con la IA", error);
+          reembolsar();
           return fail(
             "No he podido conectar con el servicio de IA. Inténtalo de nuevo en unos minutos y, si es urgente, consulta la ficha técnica o al Colegio.",
             502,
@@ -99,6 +135,7 @@ export const Route = createFileRoute("/api/chat")({
         if (!upstream.ok || !upstream.body) {
           const detail = await upstream.text().catch(() => "");
           console.error("[chat] La IA respondió", upstream.status, detail.slice(0, 400));
+          reembolsar();
           // Gemini devuelve 400 (no 401) cuando la clave no es válida o ha caducado
           const keyProblem = upstream.status === 400 && /api[ _]key/i.test(detail);
           if (upstream.status === 401 || upstream.status === 403 || keyProblem) {

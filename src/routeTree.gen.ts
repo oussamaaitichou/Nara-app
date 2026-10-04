@@ -10,12 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ConsultaRouteImport } from './routes/consulta'
+import { Route as ApiAccesoRouteImport } from './routes/api/acceso'
+import { Route as ApiAdminRouteImport } from './routes/api/admin'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiValoracionRouteImport } from './routes/api/valoracion'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConsultaRoute = ConsultaRouteImport.update({
@@ -23,40 +32,93 @@ const ConsultaRoute = ConsultaRouteImport.update({
   path: '/consulta',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAccesoRoute = ApiAccesoRouteImport.update({
+  id: '/api/acceso',
+  path: '/api/acceso',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminRoute = ApiAdminRouteImport.update({
+  id: '/api/admin',
+  path: '/api/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiValoracionRoute = ApiValoracionRouteImport.update({
+  id: '/api/valoracion',
+  path: '/api/valoracion',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/consulta': typeof ConsultaRoute
+  '/api/acceso': typeof ApiAccesoRoute
+  '/api/admin': typeof ApiAdminRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/valoracion': typeof ApiValoracionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/consulta': typeof ConsultaRoute
+  '/api/acceso': typeof ApiAccesoRoute
+  '/api/admin': typeof ApiAdminRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/valoracion': typeof ApiValoracionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/consulta': typeof ConsultaRoute
+  '/api/acceso': typeof ApiAccesoRoute
+  '/api/admin': typeof ApiAdminRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/valoracion': typeof ApiValoracionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/consulta' | '/api/chat'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/consulta'
+    | '/api/acceso'
+    | '/api/admin'
+    | '/api/chat'
+    | '/api/valoracion'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/consulta' | '/api/chat'
-  id: '__root__' | '/' | '/consulta' | '/api/chat'
+  to:
+    | '/'
+    | '/admin'
+    | '/consulta'
+    | '/api/acceso'
+    | '/api/admin'
+    | '/api/chat'
+    | '/api/valoracion'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/consulta'
+    | '/api/acceso'
+    | '/api/admin'
+    | '/api/chat'
+    | '/api/valoracion'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   ConsultaRoute: typeof ConsultaRoute
+  ApiAccesoRoute: typeof ApiAccesoRoute
+  ApiAdminRoute: typeof ApiAdminRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiValoracionRoute: typeof ApiValoracionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -68,11 +130,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/consulta': {
       id: '/consulta'
       path: '/consulta'
       fullPath: '/consulta'
       preLoaderRoute: typeof ConsultaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/acceso': {
+      id: '/api/acceso'
+      path: '/api/acceso'
+      fullPath: '/api/acceso'
+      preLoaderRoute: typeof ApiAccesoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin': {
+      id: '/api/admin'
+      path: '/api/admin'
+      fullPath: '/api/admin'
+      preLoaderRoute: typeof ApiAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
@@ -82,13 +165,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/valoracion': {
+      id: '/api/valoracion'
+      path: '/api/valoracion'
+      fullPath: '/api/valoracion'
+      preLoaderRoute: typeof ApiValoracionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   ConsultaRoute: ConsultaRoute,
+  ApiAccesoRoute: ApiAccesoRoute,
+  ApiAdminRoute: ApiAdminRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiValoracionRoute: ApiValoracionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

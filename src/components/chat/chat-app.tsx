@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { AlertTriangle, ArrowUp, Menu, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowUp, LogOut, Menu, Plus, ShieldAlert, Trash2 } from "lucide-react";
 import { NaraMark, NaraWordmark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { AccessGate } from "@/components/chat/access-gate";
+import { FeedbackButtons } from "@/components/chat/feedback-buttons";
 import { Markdown } from "@/lib/chat/markdown";
 import { TOPICS } from "@/lib/chat/knowledge";
 import { parseNaraPayload, ESCALATE_COPY } from "@/lib/chat/parse";
@@ -28,7 +30,7 @@ async function streamNara(
     } catch {
       // keep default
     }
-    throw new Error(message);
+    throw Object.assign(new Error(message), { status: res.status });
   }
   if (!res.body) throw new Error("Nara no ha podido responder.");
 
@@ -155,6 +157,14 @@ function MessageBubble({ message, streaming }: { message: ChatMessage; streaming
   );
 }
 
+type EstadoAcceso = {
+  cargando: boolean;
+  requerido: boolean;
+  autenticado: boolean;
+  restantes?: number;
+  limite?: number;
+};
+
 export function ChatApp({
   initialQuestion,
   initialTopic,
@@ -172,6 +182,7 @@ export function ChatApp({
   const [error, setError] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [acceso, setAcceso] = useState<EstadoAcceso>({ cargando: true, requerido: false, autenticado: true });
   const scroller = useRef<HTMLDivElement>(null);
   const seeded = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -180,6 +191,37 @@ export function ChatApp({
     () => TOPICS.find((t) => t.id === initialTopic) ?? null,
     [initialTopic],
   );
+
+  async function refrescarAcceso() {
+    try {
+      const res = await fetch("/api/acceso");
+      const json = (await res.json()) as {
+        accesoActivo?: boolean;
+        autenticado?: boolean;
+        restantes?: number;
+        limite?: number;
+      };
+      setAcceso({
+        cargando: false,
+        requerido: !!json.accesoActivo,
+        autenticado: json.accesoActivo ? !!json.autenticado : true,
+        restantes: json.restantes,
+        limite: json.limite,
+      });
+    } catch {
+      // sin conexión: se mantiene el estado anterior
+      setAcceso((a) => ({ ...a, cargando: false }));
+    }
+  }
+
+  async function salir() {
+    await fetch("/api/acceso", { method: "DELETE" }).catch(() => undefined);
+    await refrescarAcceso();
+  }
+
+  useEffect(() => {
+    void refrescarAcceso();
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -246,9 +288,11 @@ export function ChatApp({
     } catch (err) {
       const message = err instanceof Error ? err.message : "Nara no ha podido responder.";
       setError(message);
-      patchMessage(conversationId, assistantId, { content: message });
+      patchMessage(conversationId, assistantId, { content: message, error: true });
+      if ((err as { status?: number }).status === 401) void refrescarAcceso();
     } finally {
       setBusy(false);
+      void refrescarAcceso();
       textareaRef.current?.focus();
     }
   }
@@ -262,6 +306,13 @@ export function ChatApp({
       e.preventDefault();
       void send(draft);
     }
+  }
+
+  if (acceso.cargando) {
+    return <div className="flex min-h-dvh items-center justify-center bg-bg" aria-busy="true" />;
+  }
+  if (acceso.requerido && !acceso.autenticado) {
+    return <AccessGate onSuccess={() => void refrescarAcceso()} />;
   }
 
   return (
@@ -298,9 +349,22 @@ export function ChatApp({
               Asesora de oficina de farmacia · orientación profesional
             </p>
           </div>
-          <Button variant="ghost" size="sm" asChild>
-            <a href="/">Inicio</a>
-          </Button>
+          <div className="flex items-center gap-1">
+            {acceso.requerido && acceso.autenticado && acceso.restantes !== undefined ? (
+              <span className="hidden text-xs text-muted sm:inline">
+                {acceso.restantes} de {acceso.limite} consultas hoy
+              </span>
+            ) : null}
+            {acceso.requerido && acceso.autenticado ? (
+              <Button variant="ghost" size="sm" onClick={() => void salir()} aria-label="Salir">
+                <LogOut className="size-4" />
+                <span className="hidden sm:inline">Salir</span>
+              </Button>
+            ) : null}
+            <Button variant="ghost" size="sm" asChild>
+              <a href="/">Inicio</a>
+            </Button>
+          </div>
         </header>
 
         <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
@@ -315,6 +379,13 @@ export function ChatApp({
                   {topic
                     ? topic.blurb
                     : "Receta, sustitución, guardia, inspección o una interacción rara. Cuéntalo como a una compañera de turno."}
+                </p>
+              </div>
+              <div className="flex gap-2 rounded-lg bg-warn-soft px-3 py-2.5 text-sm text-warn">
+                <ShieldAlert className="mt-0.5 size-4 shrink-0" />
+                <p>
+                  <span className="font-medium">No escribas datos de pacientes</span> (nombre, DNI, CIP, historia clínica).
+                  Describe el caso de forma anónima: edad, medicación y tipo de receta.
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -333,13 +404,21 @@ export function ChatApp({
             </div>
           ) : (
             <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6">
-              {active.messages.map((m, idx) => (
-                <MessageBubble
-                  key={m.id}
-                  message={m}
-                  streaming={busy && idx === active.messages.length - 1 && m.role === "assistant"}
-                />
-              ))}
+              {active.messages.map((m, idx) => {
+                const streamingMsg = busy && idx === active.messages.length - 1 && m.role === "assistant";
+                const pregunta =
+                  [...active.messages.slice(0, idx)].reverse().find((x) => x.role === "user")?.content ?? "";
+                const valorable =
+                  acceso.requerido && acceso.autenticado && m.role === "assistant" && !streamingMsg && !m.error && !!m.content && !!pregunta;
+                return (
+                  <div key={m.id} className="flex flex-col gap-2">
+                    <MessageBubble message={m} streaming={streamingMsg} />
+                    {valorable ? (
+                      <FeedbackButtons pregunta={pregunta} respuesta={m.content} onAccesoPerdido={() => void refrescarAcceso()} />
+                    ) : null}
+                  </div>
+                );
+              })}
               {lastAssistant && !busy && lastAssistant.followUps && lastAssistant.followUps.length > 0 ? (
                 <div className="flex flex-wrap gap-2 pl-11">
                   {lastAssistant.followUps.map((q) => (
@@ -383,7 +462,7 @@ export function ChatApp({
           </form>
           {error ? <p className="mx-auto mt-2 max-w-3xl text-sm text-danger">{error}</p> : null}
           <p className="mx-auto mt-2 max-w-3xl text-center text-xs text-subtle">
-            Orientación profesional. Contrasta ficha técnica, nomenclátor y normativa de tu CCAA.
+            Orientación profesional. Contrasta ficha técnica, nomenclátor y normativa de tu CCAA. No escribas datos de pacientes.
           </p>
         </div>
       </div>
