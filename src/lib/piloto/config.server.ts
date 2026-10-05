@@ -30,3 +30,19 @@ export function errorConfiguracion(): string | null {
   if (!baseDatosLista()) return "Falta DATABASE_URL en la configuración del servidor.";
   return null;
 }
+
+/** Las solicitudes de informe y de acompañamiento solo se aceptan con SOLICITUDES_ACTIVAS=si (apagado por defecto). */
+export function solicitudesActivas(): boolean {
+  return process.env.SOLICITUDES_ACTIVAS?.trim().toLowerCase() === "si";
+}
+
+/** Enlace de pago del informe (por ejemplo, un enlace de pago de Stripe). Solo se admite https. */
+export function urlPago(): string | null {
+  const u = process.env.INFORME_PAGO_URL?.trim();
+  return u && u.startsWith("https://") ? u : null;
+}
+
+/** Texto del precio que se muestra al usuario. Cámbialo con INFORME_PRECIO_TEXTO (por ejemplo "100 € + IVA"). */
+export function precioTexto(): string {
+  return process.env.INFORME_PRECIO_TEXTO?.trim() || "100 € + IVA";
+}

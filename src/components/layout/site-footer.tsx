@@ -1,4 +1,7 @@
 import { NaraWordmark } from "@/components/brand/logo";
+import legal from "@/lib/knowledge/legal.json";
+
+const ENLACES: [string, string][] = [["privacidad", "Privacidad"], ["aviso-legal", "Aviso legal"], ["condiciones", "Condiciones"], ["cookies", "Cookies"]];
 
 export function SiteFooter() {
   return (
@@ -11,7 +14,14 @@ export function SiteFooter() {
             ficha técnica, Colegio, inspección ni prescriptor.
           </p>
         </div>
-        <p className="text-xs text-subtle">España · normativa de oficina de farmacia</p>
+        <div className="space-y-2 sm:text-right">
+          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted sm:justify-end">
+            {ENLACES.filter(([k]) => (legal as Record<string, string>)[k]).map(([k, t]) => (
+              <a key={k} href={`/legal/${k}`} className="hover:text-ink">{t}</a>
+            ))}
+          </nav>
+          <p className="text-xs text-subtle">España · normativa de oficina de farmacia</p>
+        </div>
       </div>
     </footer>
   );

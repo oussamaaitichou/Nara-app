@@ -12,10 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ConsultaRouteImport } from './routes/consulta'
+import { Route as ValorarRouteImport } from './routes/valorar'
 import { Route as ApiAccesoRouteImport } from './routes/api/acceso'
 import { Route as ApiAdminRouteImport } from './routes/api/admin'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiSolicitudRouteImport } from './routes/api/solicitud'
 import { Route as ApiValoracionRouteImport } from './routes/api/valoracion'
+import { Route as LegalDocRouteImport } from './routes/legal.$doc'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -30,6 +33,11 @@ const AdminRoute = AdminRouteImport.update({
 const ConsultaRoute = ConsultaRouteImport.update({
   id: '/consulta',
   path: '/consulta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ValorarRoute = ValorarRouteImport.update({
+  id: '/valorar',
+  path: '/valorar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAccesoRoute = ApiAccesoRouteImport.update({
@@ -47,9 +55,19 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSolicitudRoute = ApiSolicitudRouteImport.update({
+  id: '/api/solicitud',
+  path: '/api/solicitud',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiValoracionRoute = ApiValoracionRouteImport.update({
   id: '/api/valoracion',
   path: '/api/valoracion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalDocRoute = LegalDocRouteImport.update({
+  id: '/legal/$doc',
+  path: '/legal/$doc',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -57,29 +75,38 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/consulta': typeof ConsultaRoute
+  '/valorar': typeof ValorarRoute
   '/api/acceso': typeof ApiAccesoRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/solicitud': typeof ApiSolicitudRoute
   '/api/valoracion': typeof ApiValoracionRoute
+  '/legal/$doc': typeof LegalDocRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/consulta': typeof ConsultaRoute
+  '/valorar': typeof ValorarRoute
   '/api/acceso': typeof ApiAccesoRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/solicitud': typeof ApiSolicitudRoute
   '/api/valoracion': typeof ApiValoracionRoute
+  '/legal/$doc': typeof LegalDocRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/consulta': typeof ConsultaRoute
+  '/valorar': typeof ValorarRoute
   '/api/acceso': typeof ApiAccesoRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/solicitud': typeof ApiSolicitudRoute
   '/api/valoracion': typeof ApiValoracionRoute
+  '/legal/$doc': typeof LegalDocRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -87,38 +114,50 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/consulta'
+    | '/valorar'
     | '/api/acceso'
     | '/api/admin'
     | '/api/chat'
+    | '/api/solicitud'
     | '/api/valoracion'
+    | '/legal/$doc'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
     | '/consulta'
+    | '/valorar'
     | '/api/acceso'
     | '/api/admin'
     | '/api/chat'
+    | '/api/solicitud'
     | '/api/valoracion'
+    | '/legal/$doc'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/consulta'
+    | '/valorar'
     | '/api/acceso'
     | '/api/admin'
     | '/api/chat'
+    | '/api/solicitud'
     | '/api/valoracion'
+    | '/legal/$doc'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   ConsultaRoute: typeof ConsultaRoute
+  ValorarRoute: typeof ValorarRoute
   ApiAccesoRoute: typeof ApiAccesoRoute
   ApiAdminRoute: typeof ApiAdminRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiSolicitudRoute: typeof ApiSolicitudRoute
   ApiValoracionRoute: typeof ApiValoracionRoute
+  LegalDocRoute: typeof LegalDocRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -144,6 +183,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsultaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/valorar': {
+      id: '/valorar'
+      path: '/valorar'
+      fullPath: '/valorar'
+      preLoaderRoute: typeof ValorarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/acceso': {
       id: '/api/acceso'
       path: '/api/acceso'
@@ -165,11 +211,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/solicitud': {
+      id: '/api/solicitud'
+      path: '/api/solicitud'
+      fullPath: '/api/solicitud'
+      preLoaderRoute: typeof ApiSolicitudRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/valoracion': {
       id: '/api/valoracion'
       path: '/api/valoracion'
       fullPath: '/api/valoracion'
       preLoaderRoute: typeof ApiValoracionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/$doc': {
+      id: '/legal/$doc'
+      path: '/legal/$doc'
+      fullPath: '/legal/$doc'
+      preLoaderRoute: typeof LegalDocRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -179,10 +239,13 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   ConsultaRoute: ConsultaRoute,
+  ValorarRoute: ValorarRoute,
   ApiAccesoRoute: ApiAccesoRoute,
   ApiAdminRoute: ApiAdminRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiSolicitudRoute: ApiSolicitudRoute,
   ApiValoracionRoute: ApiValoracionRoute,
+  LegalDocRoute: LegalDocRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

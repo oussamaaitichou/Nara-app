@@ -34,7 +34,24 @@ type Valoracion = {
   estado: "pendiente" | "revisada" | "corregida" | "descartada";
   nota_admin: string | null;
 };
-type Datos = { codigos: Codigo[]; valoraciones: Valoracion[]; pendientes: number };
+type Solicitud = {
+  id: number;
+  creado: string;
+  tipo: "informe" | "acompanamiento";
+  rol: "vendedor" | "comprador";
+  nombre: string;
+  email: string;
+  telefono: string | null;
+  ccaa: string | null;
+  mensaje: string | null;
+  datos: string | null;
+  estado: "nueva" | "pendiente_pago" | "pagada" | "en_curso" | "entregada" | "descartada";
+  nota_admin: string | null;
+};
+type Datos = { codigos: Codigo[]; valoraciones: Valoracion[]; pendientes: number; solicitudes: Solicitud[]; nuevas: number };
+const ESTADOS_SOLICITUD: Record<Solicitud["estado"], string> = {
+  nueva: "Nueva", pendiente_pago: "Pendiente de pago", pagada: "Pagada", en_curso: "En curso", entregada: "Entregada", descartada: "Descartada",
+};
 
 const ESTADOS = ["pendiente", "revisada", "corregida", "descartada"] as const;
 const fecha = (iso: string | null) => (iso ? new Date(iso).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" }) : "—");
@@ -251,6 +268,22 @@ function AdminPage() {
           )}
         </section>
 
+        {/* ---------- Solicitudes */}
+        <section className="space-y-4">
+          <h2 className="font-display text-xl font-semibold text-ink">
+            Solicitudes {d.nuevas > 0 ? <span className="ml-1 rounded-full bg-warn-soft px-2 py-0.5 text-sm text-warn">{d.nuevas} por atender</span> : null}
+          </h2>
+          {d.solicitudes.length === 0 ? (
+            <p className="text-sm text-muted">Aún no hay solicitudes de informe ni de acompañamiento.</p>
+          ) : (
+            <ul className="space-y-3">
+              {d.solicitudes.map((s) => (
+                <SolicitudItem key={s.id} s={s} accion={accion} />
+              ))}
+            </ul>
+          )}
+        </section>
+
         {/* ---------- Valoraciones */}
         <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -327,6 +360,52 @@ function CodigoItem({ c, accion, regenerar }: { c: Codigo; accion: Accion; regen
           Guardar
         </Button>
       </form>
+    </li>
+  );
+}
+
+function SolicitudItem({ s, accion }: { s: Solicitud; accion: Accion }) {
+  const [nota, setNota] = useState(s.nota_admin ?? "");
+  let datos = "";
+  try {
+    datos = s.datos ? JSON.stringify(JSON.parse(s.datos), null, 2) : "";
+  } catch {
+    datos = s.datos ?? "";
+  }
+  return (
+    <li className="space-y-3 rounded-lg border border-line bg-surface p-4">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+        <span className="rounded-full bg-teal-mist px-2 py-0.5 text-teal-deep">{s.tipo === "informe" ? "Informe de valoración" : "Gestión de la operación"}</span>
+        <span className="rounded-full bg-bg px-2 py-0.5">{s.rol === "vendedor" ? "Vendedor" : "Comprador"}</span>
+        <span>{fecha(s.creado)}</span>
+      </div>
+      <div className="space-y-0.5 text-sm text-ink">
+        <p className="font-medium">{s.nombre}</p>
+        <p>
+          <a className="underline" href={`mailto:${s.email}`}>{s.email}</a>
+          {s.telefono ? <> · <a className="underline" href={`tel:${s.telefono}`}>{s.telefono}</a></> : null}
+          {s.ccaa ? <> · {s.ccaa}</> : null}
+        </p>
+      </div>
+      {s.mensaje ? <p className="rounded-md bg-bg p-3 text-sm whitespace-pre-wrap text-ink-soft">{s.mensaje}</p> : null}
+      {datos ? (
+        <details className="text-sm">
+          <summary className="cursor-pointer font-medium text-teal-deep">Ver los datos de la calculadora</summary>
+          <pre className="mt-2 max-h-72 overflow-auto rounded-md bg-bg p-3 text-xs text-ink-soft">{datos}</pre>
+        </details>
+      ) : null}
+      <div className="space-y-2 border-t border-line pt-3">
+        <Textarea value={nota} onChange={(e) => setNota(e.target.value)} rows={2} maxLength={1000} placeholder="Tu nota interna…" className="min-h-14 resize-none text-sm" />
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={s.estado} onChange={(e) => void accion({ accion: "solicitud", id: s.id, estado: e.target.value, nota })} className={campo}>
+            {(Object.keys(ESTADOS_SOLICITUD) as Solicitud["estado"][]).map((k) => (
+              <option key={k} value={k}>{ESTADOS_SOLICITUD[k]}</option>
+            ))}
+          </select>
+          <Button size="sm" variant="outline" onClick={() => void accion({ accion: "solicitud", id: s.id, estado: s.estado, nota }, "Nota guardada.")}>Guardar nota</Button>
+          <Button size="sm" variant="ghost" onClick={() => { if (window.confirm("¿Eliminar esta solicitud y sus datos? No se puede deshacer.")) void accion({ accion: "borrar_solicitud", id: s.id }); }}>Eliminar</Button>
+        </div>
+      </div>
     </li>
   );
 }

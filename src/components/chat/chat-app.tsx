@@ -383,6 +383,9 @@ export function ChatApp({
               </Button>
             ) : null}
             <Button variant="ghost" size="sm" asChild>
+              <a href="/valorar">Valorar farmacia</a>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
               <a href="/">Inicio</a>
             </Button>
           </div>

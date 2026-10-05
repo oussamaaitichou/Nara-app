@@ -26,6 +26,12 @@ export function SiteHeader({ solid = false }: { solid?: boolean }) {
           >
             Cómo funciona
           </a>
+          <Link
+            to="/valorar"
+            className="hidden h-11 items-center px-3 text-sm font-medium text-muted hover:text-ink sm:inline-flex"
+          >
+            Valorar farmacia
+          </Link>
           <Button asChild size="sm">
             <Link to="/consulta">Consultar a Nara</Link>
           </Button>

@@ -35,6 +35,21 @@ function asegurarEsquema(): Promise<void> {
       estado text not null default 'pendiente' check (estado in ('pendiente','revisada','corregida','descartada')),
       nota_admin text
     )`);
+    await sql.query(`create table if not exists piloto_solicitudes (
+      id serial primary key,
+      creado timestamptz not null default now(),
+      tipo text not null check (tipo in ('informe','acompanamiento')),
+      rol text not null check (rol in ('vendedor','comprador')),
+      nombre text not null,
+      email text not null,
+      telefono text,
+      ccaa text,
+      mensaje text,
+      datos text,
+      estado text not null default 'nueva' check (estado in ('nueva','pendiente_pago','pagada','en_curso','entregada','descartada')),
+      nota_admin text,
+      consentimiento_en timestamptz not null
+    )`);
   })().catch((e) => {
     listo = null;
     throw e;
@@ -195,5 +210,73 @@ export async function eliminarValoracion(id: number): Promise<void> {
 export async function contarPendientes(): Promise<number> {
   const sql = await db();
   const rows = await sql<{ n: number }>`select count(*) as n from piloto_valoraciones where estado = 'pendiente'`;
+  return rows[0]?.n ?? 0;
+}
+
+// ---------- Solicitudes de informe y acompañamiento
+
+export type SolicitudFila = {
+  id: number;
+  creado: string;
+  tipo: "informe" | "acompanamiento";
+  rol: "vendedor" | "comprador";
+  nombre: string;
+  email: string;
+  telefono: string | null;
+  ccaa: string | null;
+  mensaje: string | null;
+  datos: string | null;
+  estado: "nueva" | "pendiente_pago" | "pagada" | "en_curso" | "entregada" | "descartada";
+  nota_admin: string | null;
+};
+
+export async function crearSolicitud(s: {
+  tipo: "informe" | "acompanamiento";
+  rol: "vendedor" | "comprador";
+  nombre: string;
+  email: string;
+  telefono: string | null;
+  ccaa: string | null;
+  mensaje: string | null;
+  datos: string | null;
+}): Promise<number> {
+  const sql = await db();
+  const estado = s.tipo === "informe" ? "pendiente_pago" : "nueva";
+  const rows = await sql<{ id: number }>`
+    insert into piloto_solicitudes (tipo, rol, nombre, email, telefono, ccaa, mensaje, datos, estado, consentimiento_en)
+    values (${s.tipo}, ${s.rol}, ${s.nombre}, ${s.email}, ${s.telefono}, ${s.ccaa}, ${s.mensaje}, ${s.datos}, ${estado}, now())
+    returning id`;
+  return rows[0]!.id;
+}
+
+/** Para frenar abusos: solicitudes del mismo correo y totales en las últimas 24 horas. */
+export async function contarSolicitudesRecientes(email: string): Promise<{ porEmail: number; total: number }> {
+  const sql = await db();
+  const rows = await sql<{ por_email: number; total: number }>`
+    select count(*) filter (where lower(email) = ${email.toLowerCase()}) as por_email, count(*) as total
+    from piloto_solicitudes where creado > now() - interval '24 hours'`;
+  return { porEmail: rows[0]?.por_email ?? 0, total: rows[0]?.total ?? 0 };
+}
+
+export async function listarSolicitudes(): Promise<SolicitudFila[]> {
+  const sql = await db();
+  return sql<SolicitudFila>`
+    select id, creado, tipo, rol, nombre, email, telefono, ccaa, mensaje, datos, estado, nota_admin
+    from piloto_solicitudes order by creado desc limit 200`;
+}
+
+export async function actualizarSolicitud(id: number, estado: string, nota: string | null): Promise<void> {
+  const sql = await db();
+  await sql`update piloto_solicitudes set estado = ${estado}, nota_admin = ${nota} where id = ${id}`;
+}
+
+export async function eliminarSolicitud(id: number): Promise<void> {
+  const sql = await db();
+  await sql`delete from piloto_solicitudes where id = ${id}`;
+}
+
+export async function contarNuevas(): Promise<number> {
+  const sql = await db();
+  const rows = await sql<{ n: number }>`select count(*) as n from piloto_solicitudes where estado = 'nueva' or estado = 'pagada'`;
   return rows[0]?.n ?? 0;
 }

@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { adminPassword, COOKIE_ADMIN, errorConfiguracion } from "@/lib/piloto/config.server";
 import {
-  actualizarCodigo, actualizarValoracion, contarPendientes, crearCodigo, eliminarValoracion,
-  listarCodigos, listarValoraciones, regenerarCodigo,
+  actualizarCodigo, actualizarSolicitud, actualizarValoracion, contarNuevas, contarPendientes, crearCodigo,
+  eliminarSolicitud, eliminarValoracion, listarCodigos, listarSolicitudes, listarValoraciones, regenerarCodigo,
 } from "@/lib/piloto/db.server";
 import { cookieBorrar, cookieSet, crearSesionAdmin, esAdmin, igualesSeguro, pausa } from "@/lib/piloto/sesion.server";
 
 const ESTADOS = ["pendiente", "revisada", "corregida", "descartada"];
+const ESTADOS_SOLICITUD = ["nueva", "pendiente_pago", "pagada", "en_curso", "entregada", "descartada"];
 
 function sinConfigurar(): Response | null {
   if (!adminPassword()) {
@@ -32,12 +33,14 @@ export const Route = createFileRoute("/api/admin")({
         if (!(await esAdmin(request))) return Response.json({ necesitaLogin: true }, { status: 401 });
         try {
           const estado = new URL(request.url).searchParams.get("estado");
-          const [codigos, valoraciones, pendientes] = await Promise.all([
+          const [codigos, valoraciones, pendientes, solicitudes, nuevas] = await Promise.all([
             listarCodigos(),
             listarValoraciones(estado && (ESTADOS.includes(estado) || estado === "todas") ? estado : "pendiente"),
             contarPendientes(),
+            listarSolicitudes(),
+            contarNuevas(),
           ]);
-          return Response.json({ codigos, valoraciones, pendientes });
+          return Response.json({ codigos, valoraciones, pendientes, solicitudes, nuevas });
         } catch (error) {
           console.error("[admin] Error al leer datos", error);
           return Response.json({ error: "No se han podido leer los datos." }, { status: 503 });
@@ -101,6 +104,16 @@ export const Route = createFileRoute("/api/admin")({
             const estado = typeof body.estado === "string" && ESTADOS.includes(body.estado) ? body.estado : null;
             if (!estado) return Response.json({ error: "Estado no válido." }, { status: 400 });
             await actualizarValoracion(id, estado, txt(body.nota, 1000) || null);
+            return Response.json({ ok: true });
+          }
+          if (accion === "solicitud") {
+            const estado = typeof body.estado === "string" && ESTADOS_SOLICITUD.includes(body.estado) ? body.estado : null;
+            if (!estado) return Response.json({ error: "Estado no válido." }, { status: 400 });
+            await actualizarSolicitud(id, estado, txt(body.nota, 1000) || null);
+            return Response.json({ ok: true });
+          }
+          if (accion === "borrar_solicitud") {
+            await eliminarSolicitud(id);
             return Response.json({ ok: true });
           }
           if (accion === "borrar_valoracion") {

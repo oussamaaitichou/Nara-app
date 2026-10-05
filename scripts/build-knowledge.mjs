@@ -86,3 +86,17 @@ try {
 }
 writeFileSync(join(root, "src/lib/knowledge/instrucciones.json"), JSON.stringify({ estilo }, null, 1) + "\n");
 console.log(`[instrucciones] estilo: ${estilo.length} caracteres`);
+
+// ---- Textos legales: legal/*.md -> src/lib/knowledge/legal.json (se muestran en /legal/<documento>)
+const legal = {};
+for (const doc of ["privacidad", "aviso-legal", "condiciones", "cookies"]) {
+  let t = "";
+  try {
+    t = readFileSync(join(root, "legal", `${doc}.md`), "utf8").replace(/<!--[\s\S]*?-->/g, "").trim();
+  } catch {
+    // sin archivo: documento sin publicar
+  }
+  legal[doc] = t;
+}
+writeFileSync(join(root, "src/lib/knowledge/legal.json"), JSON.stringify(legal, null, 1) + "\n");
+console.log(`[legal] publicados: ${Object.entries(legal).filter(([, v]) => v).map(([k]) => k).join(", ") || "ninguno"}`);
