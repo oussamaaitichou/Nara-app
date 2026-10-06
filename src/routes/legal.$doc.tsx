@@ -15,18 +15,50 @@ export const Route = createFileRoute("/legal/$doc")({
   head: ({ params }) => ({ meta: [{ title: `${TITULOS[params.doc] ?? "Legal"} — Nara` }] }),
 });
 
+function Inline({ t }: { t: string }) {
+  return (
+    <>
+      {t
+        .split(/(\*\*[^*]+\*\*)/g)
+        .filter(Boolean)
+        .map((p, i) =>
+          p.startsWith("**") ? (
+            <strong key={i} className="font-semibold text-ink">{p.slice(2, -2)}</strong>
+          ) : (
+            <span key={i}>{p}</span>
+          ),
+        )}
+    </>
+  );
+}
+
 function Texto({ texto }: { texto: string }) {
-  const bloques = texto.split(/\n{2,}/);
+  const bloques = texto.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+  // El título del documento ya aparece como encabezado de la página
+  const lista = bloques[0]?.startsWith("# ") ? bloques.slice(1) : bloques;
   return (
     <div className="space-y-4 text-ink-soft">
-      {bloques.map((b, i) => {
-        const l = b.trim();
+      {lista.map((l, i) => {
+        if (/^-{3,}$/.test(l)) return <hr key={i} className="border-line" />;
+        if (l.startsWith("### ")) return <h3 key={i} className="pt-1 font-display text-lg font-semibold text-ink">{l.slice(4)}</h3>;
         if (l.startsWith("## ")) return <h2 key={i} className="pt-2 font-display text-xl font-semibold text-ink">{l.slice(3)}</h2>;
-        if (l.startsWith("# ")) return <h2 key={i} className="pt-2 font-display text-2xl font-semibold text-ink">{l.slice(2)}</h2>;
-        if (l.split("\n").every((x) => x.trim().startsWith("- "))) {
-          return <ul key={i} className="list-disc space-y-1 pl-5">{l.split("\n").map((x, j) => <li key={j}>{x.trim().slice(2)}</li>)}</ul>;
+        if (l.startsWith("# ")) return <h2 key={i} className="pt-4 font-display text-xl font-semibold text-ink">{l.slice(2)}</h2>;
+        const filas = l.split("\n");
+        if (filas.every((x) => /^[*-] /.test(x.trim()))) {
+          return (
+            <ul key={i} className="list-disc space-y-1 pl-5">
+              {filas.map((x, j) => <li key={j}><Inline t={x.trim().slice(2)} /></li>)}
+            </ul>
+          );
         }
-        return <p key={i} className="whitespace-pre-line">{l}</p>;
+        if (filas.every((x) => /^\d+\. /.test(x.trim()))) {
+          return (
+            <ol key={i} className="list-decimal space-y-1 pl-5">
+              {filas.map((x, j) => <li key={j}><Inline t={x.trim().replace(/^\d+\. /, "")} /></li>)}
+            </ol>
+          );
+        }
+        return <p key={i} className="whitespace-pre-line"><Inline t={l} /></p>;
       })}
     </div>
   );

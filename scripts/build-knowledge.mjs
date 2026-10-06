@@ -50,7 +50,13 @@ for (const file of files.sort()) {
     titulo,
     fuente: meta.fuente || "sin indicar",
     revisado: meta.revisado || "sin fecha",
-    ambito: meta.ambito || "sin indicar",
+    ambito: meta.territorio || meta.ambito || "sin indicar",
+    estado: meta.estado || "sin indicar", // vigente, modificado, derogado o histórico
+    url: meta.url || "",
+    referencia: meta.referencia || "",
+    publicacion: meta.publicacion || "",
+    version: meta.version || "",
+    autoridad: meta.autoridad || "",
     verificado: ["si", "sí", "true", "yes"].includes((meta.verificado || "").toLowerCase()),
   };
   const sections = body.split(/^##\s+/m);
@@ -74,18 +80,21 @@ writeFileSync(out, JSON.stringify(chunks, null, 1) + "\n");
 console.log(`[conocimiento] ${files.length} documento(s), ${chunks.length} fragmento(s)`);
 
 // ---- Instrucciones de estilo: instrucciones/estilo.md -> src/lib/knowledge/instrucciones.json
-let estilo = "";
-try {
-  estilo = readFileSync(join(root, "instrucciones/estilo.md"), "utf8")
-    .replace(/<!--[\s\S]*?-->/g, "") // las notas entre <!-- --> no llegan a la IA
-    .replace(/^#\s+.*\n?/m, "") // quita el título principal
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-} catch {
-  // sin archivo: sin instrucciones extra
-}
-writeFileSync(join(root, "src/lib/knowledge/instrucciones.json"), JSON.stringify({ estilo }, null, 1) + "\n");
-console.log(`[instrucciones] estilo: ${estilo.length} caracteres`);
+const leerInstruccion = (archivo) => {
+  try {
+    return readFileSync(join(root, "instrucciones", archivo), "utf8")
+      .replace(/<!--[\s\S]*?-->/g, "") // las notas entre <!-- --> no llegan a la IA
+      .replace(/^#\s+.*\n?/m, "") // quita el título principal
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  } catch {
+    return ""; // sin archivo: sin instrucciones extra
+  }
+};
+const estilo = leerInstruccion("estilo.md");
+const cerebro = leerInstruccion("cerebro.md");
+writeFileSync(join(root, "src/lib/knowledge/instrucciones.json"), JSON.stringify({ estilo, cerebro }, null, 1) + "\n");
+console.log(`[instrucciones] cerebro: ${cerebro.length} caracteres · estilo: ${estilo.length} caracteres`);
 
 // ---- Textos legales: legal/*.md -> src/lib/knowledge/legal.json (se muestran en /legal/<documento>)
 const legal = {};
@@ -95,6 +104,11 @@ for (const doc of ["privacidad", "aviso-legal", "condiciones", "cookies"]) {
     t = readFileSync(join(root, "legal", `${doc}.md`), "utf8").replace(/<!--[\s\S]*?-->/g, "").trim();
   } catch {
     // sin archivo: documento sin publicar
+  }
+  const pendientes = [...new Set(t.match(/\[[^\]\n]*[A-ZÁÉÍÓÚÑ]{3,}[^\]\n]*\]/g) ?? [])];
+  if (pendientes.length) {
+    console.warn(`[legal] ${doc}: NO se publica todavía; faltan por completar: ${pendientes.join(" ")}`);
+    t = "";
   }
   legal[doc] = t;
 }

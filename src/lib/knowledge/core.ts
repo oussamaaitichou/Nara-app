@@ -7,6 +7,12 @@ export type Chunk = {
   revisado: string;
   ambito: string;
   verificado: boolean;
+  estado?: string;
+  url?: string;
+  referencia?: string;
+  publicacion?: string;
+  version?: string;
+  autoridad?: string;
   texto: string;
 };
 
@@ -93,12 +99,20 @@ export function formatContext(found: Chunk[]): string {
     "DOCUMENTOS DE REFERENCIA (base de conocimiento del equipo):",
     "Usa estos documentos como fuente prioritaria para plazos, cifras, artículos y criterios. Cítalos en el texto con su código entre corchetes, por ejemplo [D1].",
     "No inventes artículos, plazos ni porcentajes que no estén aquí o que no conozcas con seguridad.",
-    "Si un documento figura como «pendiente de verificar», dilo al usuario. Si estos documentos no cubren del todo la pregunta, indícalo y recomienda contrastarlo.",
+    "Si un documento figura como «pendiente de verificar», dilo al usuario. Si su estado es derogado, modificado o histórico, no lo presentes como norma vigente. Si estos documentos no cubren del todo la pregunta, indícalo y recomienda contrastarlo.",
     "",
   ];
   const body = found.map((c, i) => {
-    const estado = c.verificado ? "verificado" : "pendiente de verificar";
-    return `[D${i + 1}] ${c.titulo} — ${c.seccion} (ámbito: ${c.ambito} · fuente: ${c.fuente} · revisado: ${c.revisado} · ${estado})\n${c.texto}`;
+    const estadoRev = c.verificado ? "verificado" : "pendiente de verificar";
+    const extra = [
+      c.estado && c.estado !== "sin indicar" ? `estado: ${c.estado}` : "",
+      c.referencia ? `referencia: ${c.referencia}` : "",
+      c.autoridad ? `autoridad: ${c.autoridad}` : "",
+      c.publicacion ? `publicada: ${c.publicacion}` : "",
+      c.version ? `versión: ${c.version}` : "",
+      c.url ? `enlace: ${c.url}` : "",
+    ].filter(Boolean);
+    return `[D${i + 1}] ${c.titulo} — ${c.seccion} (ámbito: ${c.ambito} · fuente: ${c.fuente} · revisado: ${c.revisado} · ${estadoRev}${extra.length ? " · " + extra.join(" · ") : ""})\n${c.texto}`;
   });
   return [...head, ...body].join("\n\n");
 }

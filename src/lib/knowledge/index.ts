@@ -10,4 +10,5 @@ export function retrieve(query: string, k = 4): Chunk[] {
 
 export { formatContext, formatSources };
 export const ESTILO: string = (instrucciones as { estilo?: string }).estilo ?? "";
+export const CEREBRO: string = (instrucciones as { cerebro?: string }).cerebro ?? "";
 export const KNOWLEDGE_CHUNKS = index.chunks.length;

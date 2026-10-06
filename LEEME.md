@@ -14,6 +14,10 @@ Con `PILOTO_ACCESO=activo` (más `SESSION_SECRET`, `ADMIN_PASSWORD` y `DATABASE_
 En `/admin` creas los códigos (uno por farmacia, con límite de consultas al día) y revisas las valoraciones
 "Útil" e "Incorrecta". Sin esas variables, la app funciona abierta como siempre.
 
+## El cerebro de Nara
+`instrucciones/cerebro.md` es el prompt maestro (identidad, reglas de verificación, fuentes, riesgos). Se edita con el Bloc de notas.
+El código añade siempre las capacidades reales de esta versión, las protecciones y el formato de cierre.
+
 ## Forma de responder
 El archivo `instrucciones/estilo.md` define cómo responde Nara (longitud, tono, criterios propios y ejemplos).
 Edítalo con el Bloc de notas, haz Commit y Push, y en unos minutos Nara responde así.

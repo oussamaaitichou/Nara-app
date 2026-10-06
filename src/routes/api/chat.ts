@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { NARA_SYSTEM_PROMPT } from "@/lib/chat/knowledge";
-import { retrieve, formatContext, formatSources, ESTILO } from "@/lib/knowledge";
+import { construirPrompt, fechaHoy } from "@/lib/chat/cerebro";
+import { clasificar } from "@/lib/chat/riesgo";
+import { retrieve, formatContext, formatSources, ESTILO, CEREBRO } from "@/lib/knowledge";
 import { accesoActivo, errorConfiguracion } from "@/lib/piloto/config.server";
 import { consumirConsulta, devolverConsulta } from "@/lib/piloto/db.server";
 import { sesionDe } from "@/lib/piloto/sesion.server";
@@ -84,10 +85,16 @@ export const Route = createFileRoute("/api/chat")({
         const userTurns = trimmed.filter((m) => m.role === "user");
         const query = userTurns.slice(-2).map((m) => m.content).join(" ");
         const found = retrieve(query);
-        const estiloBloque = ESTILO
-          ? `INSTRUCCIONES DE ESTILO (tienen prioridad sobre cualquier indicación anterior de formato o longitud; el bloque CIERRE OBLIGATORIO sigue vigente en todas las respuestas):\n${ESTILO}`
-          : "";
-        const systemPrompt = [NARA_SYSTEM_PROMPT, estiloBloque, formatContext(found)].filter(Boolean).join("\n\n");
+        const clasificacion = clasificar(query);
+        const systemPrompt = construirPrompt({
+          cerebro: CEREBRO,
+          estilo: ESTILO,
+          clasificacion,
+          contexto: formatContext(found),
+          fecha: fechaHoy(),
+        });
+        // Registro de trazabilidad: nivel de riesgo, temas y documentos usados. No se guarda el contenido de la consulta.
+        console.log("[chat-log]", JSON.stringify({ riesgo: clasificacion.riesgo, temas: clasificacion.temas, docs: found.map((c) => c.id), acceso: codigoId }));
         const sources = formatSources(found);
 
         if (codigoId !== null) {

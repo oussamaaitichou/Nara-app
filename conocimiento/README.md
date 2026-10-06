@@ -10,3 +10,8 @@ Aquí van los documentos que la app consulta antes de responder y cita en sus re
 
 Consejos: un apartado `##` por idea; escribe las cifras y plazos con su fuente; si algo depende de la
 comunidad autónoma, dilo. Los archivos que empiezan por `_` se ignoran.
+
+## Metadatos de cada documento
+Obligatorios: `titulo`, `fuente`, `revisado`, `territorio`, `verificado`. Recomendados para normativa: `referencia`, `url`,
+`autoridad`, `estado`, `publicacion`, `version`. Nara los ve y respeta el estado: un documento «derogado» o «histórico»
+no se presenta como norma vigente. No borres versiones antiguas: cámbialas de estado.
