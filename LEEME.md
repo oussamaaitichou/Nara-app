@@ -14,6 +14,12 @@ Con `PILOTO_ACCESO=activo` (más `SESSION_SECRET`, `ADMIN_PASSWORD` y `DATABASE_
 En `/admin` creas los códigos (uno por farmacia, con límite de consultas al día) y revisas las valoraciones
 "Útil" e "Incorrecta". Sin esas variables, la app funciona abierta como siempre.
 
+## Nara Gestión (ERP para asesorías y farmacias)
+Con `ERP_ACTIVO=si` (más `DATABASE_URL`, `SESSION_SECRET` y `ADMIN_PASSWORD`) se activa `/erp`.
+El propietario crea cada asesoría desde `/admin` (recibe una contraseña temporal que debe entregar por un canal seguro).
+La asesoría crea sus farmacias y usuarios (gestores y clientes), sube su logo y ve el cuadro de mando de cada cliente,
+alimentado con datos mensuales pegados desde Excel. Cada cliente solo ve su farmacia; cada asesoría, solo la suya.
+
 ## El cerebro de Nara
 `instrucciones/cerebro.md` es el prompt maestro (identidad, reglas de verificación, fuentes, riesgos). Se edita con el Bloc de notas.
 El código añade siempre las capacidades reales de esta versión, las protecciones y el formato de cierre.

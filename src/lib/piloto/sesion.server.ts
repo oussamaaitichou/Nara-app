@@ -7,13 +7,13 @@ const ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin O/0, I/1 para evitar
 
 export const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function firmar(payload: Record<string, unknown>, expira: string): Promise<string> {
+export async function firmar(payload: Record<string, unknown>, expira: string): Promise<string> {
   const s = secreto();
   if (!s) throw new Error("SESSION_SECRET no configurado");
   return new SignJWT(payload).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(expira).sign(enc.encode(s));
 }
 
-async function leer(token: string | undefined): Promise<Record<string, unknown> | null> {
+export async function leer(token: string | undefined): Promise<Record<string, unknown> | null> {
   const s = secreto();
   if (!s || !token) return null;
   try {

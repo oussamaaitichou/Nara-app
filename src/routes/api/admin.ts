@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { adminPassword, COOKIE_ADMIN, errorConfiguracion } from "@/lib/piloto/config.server";
+import { adminPassword, COOKIE_ADMIN, erpActivo, errorConfiguracion } from "@/lib/piloto/config.server";
 import {
   actualizarCodigo, actualizarSolicitud, actualizarValoracion, contarNuevas, contarPendientes, crearCodigo,
   eliminarSolicitud, eliminarValoracion, listarCodigos, listarSolicitudes, listarValoraciones, regenerarCodigo,
 } from "@/lib/piloto/db.server";
+import { crearAsesoria, estadoAsesoria, listarAsesorias, resetPasswordPlataforma } from "@/lib/erp/db.server";
 import { cookieBorrar, cookieSet, crearSesionAdmin, esAdmin, igualesSeguro, pausa } from "@/lib/piloto/sesion.server";
 
 const ESTADOS = ["pendiente", "revisada", "corregida", "descartada"];
@@ -33,14 +34,15 @@ export const Route = createFileRoute("/api/admin")({
         if (!(await esAdmin(request))) return Response.json({ necesitaLogin: true }, { status: 401 });
         try {
           const estado = new URL(request.url).searchParams.get("estado");
-          const [codigos, valoraciones, pendientes, solicitudes, nuevas] = await Promise.all([
+          const [codigos, valoraciones, pendientes, solicitudes, nuevas, asesorias] = await Promise.all([
             listarCodigos(),
             listarValoraciones(estado && (ESTADOS.includes(estado) || estado === "todas") ? estado : "pendiente"),
             contarPendientes(),
             listarSolicitudes(),
             contarNuevas(),
+            erpActivo() ? listarAsesorias() : Promise.resolve([]),
           ]);
-          return Response.json({ codigos, valoraciones, pendientes, solicitudes, nuevas });
+          return Response.json({ codigos, valoraciones, pendientes, solicitudes, nuevas, asesorias, erpActivo: erpActivo() });
         } catch (error) {
           console.error("[admin] Error al leer datos", error);
           return Response.json({ error: "No se han podido leer los datos." }, { status: 503 });
@@ -83,9 +85,28 @@ export const Route = createFileRoute("/api/admin")({
             const { id, codigo } = await crearCodigo(etiqueta, limite);
             return Response.json({ ok: true, id, codigo });
           }
+          if (accion === "crear_asesoria") {
+            if (!erpActivo()) return Response.json({ error: "El ERP no está activado (ERP_ACTIVO)." }, { status: 400 });
+            const nombre = txt(body.nombre, 120);
+            const email = txt(body.adminEmail, 254);
+            const adminNombre = txt(body.adminNombre, 120);
+            if (nombre.length < 2 || adminNombre.length < 2 || !/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/.test(email)) {
+              return Response.json({ error: "Indica el nombre de la asesoría, y nombre y correo válidos de su administrador." }, { status: 400 });
+            }
+            const r = await crearAsesoria(nombre, email, adminNombre);
+            return r ? Response.json({ ok: true, ...r }) : Response.json({ error: "Ya existe un usuario con ese correo." }, { status: 409 });
+          }
           const id = num(body.id);
           if (id === null) return Response.json({ error: "Falta el identificador." }, { status: 400 });
 
+          if (accion === "estado_asesoria") {
+            await estadoAsesoria(id, body.activa === true);
+            return Response.json({ ok: true });
+          }
+          if (accion === "reset_admin_asesoria") {
+            const pass = await resetPasswordPlataforma(id);
+            return pass ? Response.json({ ok: true, passwordTemporal: pass }) : Response.json({ error: "No existe ese usuario." }, { status: 404 });
+          }
           if (accion === "regenerar") {
             const codigo = await regenerarCodigo(id);
             return codigo ? Response.json({ ok: true, codigo }) : Response.json({ error: "No existe ese código." }, { status: 404 });

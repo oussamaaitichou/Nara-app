@@ -46,3 +46,10 @@ export function urlPago(): string | null {
 export function precioTexto(): string {
   return process.env.INFORME_PRECIO_TEXTO?.trim() || "100 € + IVA";
 }
+
+export const COOKIE_ERP = "nara_erp";
+
+/** El ERP (asesorías, farmacias y usuarios) solo funciona con ERP_ACTIVO=si. Apagado por defecto. */
+export function erpActivo(): boolean {
+  return process.env.ERP_ACTIVO?.trim().toLowerCase() === "si";
+}

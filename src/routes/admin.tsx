@@ -4,6 +4,7 @@ import { Check, Copy, KeyRound, LogOut, ThumbsDown, ThumbsUp } from "lucide-reac
 import { NaraMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ClaveTemporal } from "@/components/erp/comun";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -48,7 +49,8 @@ type Solicitud = {
   estado: "nueva" | "pendiente_pago" | "pagada" | "en_curso" | "entregada" | "descartada";
   nota_admin: string | null;
 };
-type Datos = { codigos: Codigo[]; valoraciones: Valoracion[]; pendientes: number; solicitudes: Solicitud[]; nuevas: number };
+type Asesoria = { id: number; nombre: string; activa: boolean; farmacias: number; usuarios: number; admin_id: number | null; admin_email: string | null };
+type Datos = { codigos: Codigo[]; valoraciones: Valoracion[]; pendientes: number; solicitudes: Solicitud[]; nuevas: number; asesorias: Asesoria[]; erpActivo: boolean };
 const ESTADOS_SOLICITUD: Record<Solicitud["estado"], string> = {
   nueva: "Nueva", pendiente_pago: "Pendiente de pago", pagada: "Pagada", en_curso: "En curso", entregada: "Entregada", descartada: "Descartada",
 };
@@ -268,6 +270,9 @@ function AdminPage() {
           )}
         </section>
 
+        {/* ---------- Asesorías (Nara Gestión) */}
+        {d.erpActivo ? <SeccionAsesorias asesorias={d.asesorias} accion={accion} /> : null}
+
         {/* ---------- Solicitudes */}
         <section className="space-y-4">
           <h2 className="font-display text-xl font-semibold text-ink">
@@ -361,6 +366,40 @@ function CodigoItem({ c, accion, regenerar }: { c: Codigo; accion: Accion; regen
         </Button>
       </form>
     </li>
+  );
+}
+
+function SeccionAsesorias({ asesorias, accion }: { asesorias: Asesoria[]; accion: Accion }) {
+  const [f, setF] = useState({ nombre: "", adminNombre: "", adminEmail: "" });
+  const [clave, setClave] = useState<{ titulo: string; clave: string } | null>(null);
+  return (
+    <section className="space-y-4">
+      <h2 className="font-display text-xl font-semibold text-ink">Asesorías (Nara Gestión)</h2>
+      {clave ? <ClaveTemporal titulo={clave.titulo} clave={clave.clave} onCerrar={() => setClave(null)} /> : null}
+      <form className="flex flex-wrap items-end gap-2 rounded-lg border border-line bg-surface p-4" onSubmit={async (e) => {
+        e.preventDefault();
+        const r = await accion({ accion: "crear_asesoria", nombre: f.nombre, adminNombre: f.adminNombre, adminEmail: f.adminEmail });
+        if (r?.passwordTemporal) { setClave({ titulo: `Asesoría creada. Acceso de ${f.adminEmail}.`, clave: r.passwordTemporal as string }); setF({ nombre: "", adminNombre: "", adminEmail: "" }); }
+      }}>
+        <label className="space-y-1 text-sm text-ink-soft"><span>Nombre de la asesoría</span><input className={`${campo} block w-52`} value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></label>
+        <label className="space-y-1 text-sm text-ink-soft"><span>Administrador</span><input className={`${campo} block w-44`} value={f.adminNombre} onChange={(e) => setF({ ...f, adminNombre: e.target.value })} /></label>
+        <label className="space-y-1 text-sm text-ink-soft"><span>Correo del administrador</span><input className={`${campo} block w-56`} type="email" value={f.adminEmail} onChange={(e) => setF({ ...f, adminEmail: e.target.value })} /></label>
+        <Button type="submit" disabled={f.nombre.trim().length < 2 || f.adminNombre.trim().length < 2 || !f.adminEmail}>Crear asesoría</Button>
+      </form>
+      {asesorias.length === 0 ? <p className="text-sm text-muted">Aún no hay asesorías.</p> : (
+        <ul className="space-y-2">
+          {asesorias.map((a) => (
+            <li key={a.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface p-3 ${a.activa ? "" : "opacity-60"}`}>
+              <div><p className="text-sm font-medium text-ink">{a.nombre} {a.activa ? null : <span className="ml-1 rounded-full bg-danger-soft px-2 py-0.5 text-xs text-danger">Suspendida</span>}</p><p className="text-xs text-muted">{a.farmacias} farmacias · {a.usuarios} usuarios · {a.admin_email}</p></div>
+              <div className="flex gap-2">
+                {a.admin_id ? <Button size="sm" variant="outline" onClick={async () => { if (!window.confirm("Se creará una contraseña temporal para el administrador de esta asesoría. ¿Continuar?")) return; const r = await accion({ accion: "reset_admin_asesoria", id: a.admin_id }); if (r?.passwordTemporal) setClave({ titulo: `Nueva contraseña temporal de ${a.admin_email}.`, clave: r.passwordTemporal as string }); }}>Restablecer contraseña</Button> : null}
+                <Button size="sm" variant="ghost" onClick={() => void accion({ accion: "estado_asesoria", id: a.id, activa: !a.activa })}>{a.activa ? "Suspender" : "Reactivar"}</Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
