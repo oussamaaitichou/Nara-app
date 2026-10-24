@@ -20,6 +20,11 @@ El propietario crea cada asesoría desde `/admin` (recibe una contraseña tempor
 La asesoría crea sus farmacias y usuarios (gestores y clientes), sube su logo y ve el cuadro de mando de cada cliente,
 alimentado con datos mensuales pegados desde Excel. Cada cliente solo ve su farmacia; cada asesoría, solo la suya.
 
+## Chat dentro del ERP
+En `/erp`, pestaña «Consultar a Nara»: conversaciones guardadas por usuario, sin límite de longitud. En plan Premium, lo antiguo
+se resume automáticamente para no perder el hilo. Los archivos y fotos se activan con `ARCHIVOS_ACTIVOS=si` (ver `.env.example`).
+Los usuarios no se registran solos: los da de alta la administradora de cada asesoría.
+
 ## El cerebro de Nara
 `instrucciones/cerebro.md` es el prompt maestro (identidad, reglas de verificación, fuentes, riesgos). Se edita con el Bloc de notas.
 El código añade siempre las capacidades reales de esta versión, las protecciones y el formato de cierre.

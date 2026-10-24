@@ -268,7 +268,7 @@ export function ChatApp({
 
     const conv = useChatStore.getState().conversations.find((c) => c.id === conversationId);
     const history = (conv?.messages ?? [])
-      .filter((m) => m.id !== assistantId && m.content)
+      .filter((m) => m.id !== assistantId && m.content && !m.error)
       .map((m) => ({ role: m.role, content: m.content }));
 
     // El texto que llega se muestra poco a poco (efecto de escritura), aunque el servidor lo mande en bloques.

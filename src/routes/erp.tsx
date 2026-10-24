@@ -4,6 +4,7 @@ import { ArrowLeft, Building2, KeyRound, LogOut } from "lucide-react";
 import { NaraMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { ClaveTemporal, ROL, campo, erp, type Perfil, type Rol } from "@/components/erp/comun";
+import { ChatErp } from "@/components/erp/chat-erp";
 import { FarmaciaPanel } from "@/components/erp/farmacia-panel";
 
 export const Route = createFileRoute("/erp")({
@@ -183,7 +184,8 @@ function ErpPage() {
   const [perfil, setPerfil] = useState<Perfil | null | undefined>(undefined);
   const [disponible, setDisponible] = useState(true);
   const [cambiando, setCambiando] = useState(false);
-  const [vista, setVista] = useState<"clientes" | "usuarios" | "asesoria">("clientes");
+  const [vista, setVista] = useState<"clientes" | "usuarios" | "asesoria" | "nara">("clientes");
+  const [vistaCliente, setVistaCliente] = useState<"farmacia" | "nara">("farmacia");
   const [abierta, setAbierta] = useState<{ id: number; nombre: string } | null>(null);
 
   const cargar = useCallback(async () => {
@@ -219,7 +221,14 @@ function ErpPage() {
       </header>
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
         {!asesoria ? (
-          u.farmaciaId ? <FarmaciaPanel farmaciaId={u.farmaciaId} perfil={perfil} onSesion={sesionPerdida} /> : <p className="text-muted">Tu usuario no tiene ninguna farmacia asignada. Contacta con tu asesoría.</p>
+          <>
+            <div role="tablist" className="inline-flex rounded-lg border border-line bg-surface p-1 print:hidden">
+              {([["farmacia", "Mi farmacia"], ["nara", "Consultar a Nara"]] as const).map(([k, t]) => (
+                <button key={k} role="tab" aria-selected={vistaCliente === k} type="button" onClick={() => setVistaCliente(k)} className={`rounded-md px-4 py-1.5 text-sm font-medium ${vistaCliente === k ? "bg-teal text-white" : "text-ink-soft"}`}>{t}</button>
+              ))}
+            </div>
+            {vistaCliente === "nara" ? <ChatErp perfil={perfil} onSesion={sesionPerdida} /> : u.farmaciaId ? <FarmaciaPanel farmaciaId={u.farmaciaId} perfil={perfil} onSesion={sesionPerdida} /> : <p className="text-muted">Tu usuario no tiene ninguna farmacia asignada. Contacta con tu asesoría.</p>}
+          </>
         ) : abierta ? (
           <>
             <Button variant="ghost" size="sm" className="print:hidden" onClick={() => setAbierta(null)}><ArrowLeft className="size-4" /> Volver a clientes</Button>
@@ -228,12 +237,13 @@ function ErpPage() {
         ) : (
           <>
             <div role="tablist" className="inline-flex rounded-lg border border-line bg-surface p-1">
-              {([["clientes", "Clientes"], ...(u.rol === "asesoria_admin" ? [["usuarios", "Usuarios"], ["asesoria", "Mi asesoría"]] : [])] as [typeof vista, string][]).map(([k, t]) => (
+              {([["clientes", "Clientes"], ...(u.rol === "asesoria_admin" ? [["usuarios", "Usuarios"], ["asesoria", "Mi asesoría"]] : []), ["nara", "Consultar a Nara"]] as [typeof vista, string][]).map(([k, t]) => (
                 <button key={k} role="tab" aria-selected={vista === k} type="button" onClick={() => setVista(k)} className={`rounded-md px-4 py-1.5 text-sm font-medium ${vista === k ? "bg-teal text-white" : "text-ink-soft"}`}>{t}</button>
               ))}
             </div>
             {vista === "clientes" ? <Clientes esAdmin={u.rol === "asesoria_admin"} onAbrir={(f) => setAbierta({ id: f.id, nombre: f.nombre })} /> : null}
             {vista === "usuarios" ? <Usuarios /> : null}
+            {vista === "nara" ? <ChatErp perfil={perfil} onSesion={sesionPerdida} /> : null}
             {vista === "asesoria" ? <MiAsesoria perfil={perfil} onCambio={() => void cargar()} /> : null}
           </>
         )}

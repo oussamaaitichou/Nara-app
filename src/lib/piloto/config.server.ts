@@ -53,3 +53,8 @@ export const COOKIE_ERP = "nara_erp";
 export function erpActivo(): boolean {
   return process.env.ERP_ACTIVO?.trim().toLowerCase() === "si";
 }
+
+/** Subida de archivos y fotos en el chat del ERP. Apagado por defecto: antes hay que contratar un motor de IA que no use los datos para entrenar. */
+export function archivosActivos(): boolean {
+  return process.env.ARCHIVOS_ACTIVOS?.trim().toLowerCase() === "si";
+}

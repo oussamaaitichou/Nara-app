@@ -1,0 +1,13 @@
+Código;Descripción;Proveedor;Unidades vendidas;Stock;Precio coste;Fecha caducidad
+DEMO001;Analgésico genérico 20 comp (DEMO);Distribuidor A;540;60;1,20;12/2027
+DEMO002;Crema hidratante 50 ml (DEMO);Laboratorio B;90;30;6,50;03/2027
+DEMO003;Suplemento vitamínico 30 cáps (DEMO);Laboratorio B;12;96;9,80;11/2026
+DEMO004;Protector solar 50+ (DEMO);Laboratorio C;0;48;8,40;01/2027
+DEMO005;Termómetro digital (DEMO);Distribuidor A;18;4;7,10;
+DEMO006;Gel hidroalcohólico 500 ml (DEMO);Distribuidor A;240;10;2,30;08/2028
+DEMO007;Jarabe para la tos 200 ml (DEMO);Laboratorio D;60;220;3,90;12/2026
+DEMO008;Tiras reactivas (DEMO);Laboratorio E;75;12;11,20;05/2027
+DEMO009;Producto sin movimiento (DEMO);Laboratorio C;0;0;5,00;
+DEMO010;Vendaje elástico (DEMO);Distribuidor A;150;45;1,90;
+DEMO011;Colirio hidratante (DEMO);Laboratorio D;35;20;5,60;02/2027
+DEMO012;Vitamina D gotas (DEMO);Laboratorio B;110;14;7,30;09/2027

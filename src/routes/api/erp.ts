@@ -7,32 +7,10 @@ import {
   farmaciaDe, guardarLogo, importarDatos, listarFarmacias, listarUsuarios, loginOk, resetPassword, usuarioCtx, usuarioPorEmail, type UsuarioCtx,
 } from "@/lib/erp/db.server";
 import { leerTabla } from "@/lib/erp/importar";
+import { acceso, idNum, json, servicio, txt } from "@/lib/erp/acceso.server";
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 const DOCE_HORAS = 60 * 60 * 12;
-const json = (d: unknown, status = 200, headers?: HeadersInit) => Response.json(d, { status, headers });
-const txt = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
-const idNum = (v: unknown) => (typeof v === "number" && Number.isInteger(v) && v > 0 ? v : null);
-
-function servicio(): Response | null {
-  if (!erpActivo()) return json({ error: "El ERP no está disponible todavía.", activo: false }, 404);
-  const fallo = errorConfiguracion();
-  if (fallo || !baseDatosLista()) {
-    console.error("[erp]", fallo ?? "falta DATABASE_URL");
-    return json({ error: "El servicio no está bien configurado." }, 503);
-  }
-  return null;
-}
-
-/** Identifica al usuario por su cookie y comprueba en la base de datos que sigue activo y que la sesión no ha sido invalidada. */
-async function acceso(request: Request, permitirCambio = false): Promise<UsuarioCtx | Response> {
-  const s = await sesionErp(request);
-  if (!s) return json({ error: "Inicia sesión.", sesion: false }, 401);
-  const u = await usuarioCtx(s.uid);
-  if (!u || !u.activo || !u.asesoria_activa || u.version !== s.v) return json({ error: "La sesión ya no es válida. Inicia sesión de nuevo.", sesion: false }, 401, { "Set-Cookie": cookieBorrar(request, COOKIE_ERP) });
-  if (u.debe_cambiar && !permitirCambio) return json({ error: "Debes cambiar tu contraseña antes de continuar.", debeCambiar: true }, 403);
-  return u;
-}
 const esAsesoria = (u: UsuarioCtx) => u.rol !== "cliente";
 const esAdmin = (u: UsuarioCtx) => u.rol === "asesoria_admin";
 

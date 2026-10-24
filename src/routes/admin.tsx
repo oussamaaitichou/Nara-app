@@ -49,7 +49,7 @@ type Solicitud = {
   estado: "nueva" | "pendiente_pago" | "pagada" | "en_curso" | "entregada" | "descartada";
   nota_admin: string | null;
 };
-type Asesoria = { id: number; nombre: string; activa: boolean; farmacias: number; usuarios: number; admin_id: number | null; admin_email: string | null };
+type Asesoria = { id: number; nombre: string; activa: boolean; plan: string; farmacias: number; usuarios: number; admin_id: number | null; admin_email: string | null };
 type Datos = { codigos: Codigo[]; valoraciones: Valoracion[]; pendientes: number; solicitudes: Solicitud[]; nuevas: number; asesorias: Asesoria[]; erpActivo: boolean };
 const ESTADOS_SOLICITUD: Record<Solicitud["estado"], string> = {
   nueva: "Nueva", pendiente_pago: "Pendiente de pago", pagada: "Pagada", en_curso: "En curso", entregada: "Entregada", descartada: "Descartada",
@@ -390,9 +390,10 @@ function SeccionAsesorias({ asesorias, accion }: { asesorias: Asesoria[]; accion
         <ul className="space-y-2">
           {asesorias.map((a) => (
             <li key={a.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface p-3 ${a.activa ? "" : "opacity-60"}`}>
-              <div><p className="text-sm font-medium text-ink">{a.nombre} {a.activa ? null : <span className="ml-1 rounded-full bg-danger-soft px-2 py-0.5 text-xs text-danger">Suspendida</span>}</p><p className="text-xs text-muted">{a.farmacias} farmacias · {a.usuarios} usuarios · {a.admin_email}</p></div>
+              <div><p className="text-sm font-medium text-ink">{a.nombre} {a.activa ? null : <span className="ml-1 rounded-full bg-danger-soft px-2 py-0.5 text-xs text-danger">Suspendida</span>} <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${a.plan === "premium" ? "bg-teal-mist text-teal-deep" : "bg-bg text-muted"}`}>{a.plan === "premium" ? "Premium" : "Gratis"}</span></p><p className="text-xs text-muted">{a.farmacias} farmacias · {a.usuarios} usuarios · {a.admin_email}</p></div>
               <div className="flex gap-2">
                 {a.admin_id ? <Button size="sm" variant="outline" onClick={async () => { if (!window.confirm("Se creará una contraseña temporal para el administrador de esta asesoría. ¿Continuar?")) return; const r = await accion({ accion: "reset_admin_asesoria", id: a.admin_id }); if (r?.passwordTemporal) setClave({ titulo: `Nueva contraseña temporal de ${a.admin_email}.`, clave: r.passwordTemporal as string }); }}>Restablecer contraseña</Button> : null}
+                <Button size="sm" variant="outline" onClick={() => void accion({ accion: "plan_asesoria", id: a.id, plan: a.plan === "premium" ? "gratis" : "premium" })}>{a.plan === "premium" ? "Pasar a Gratis" : "Pasar a Premium"}</Button>
                 <Button size="sm" variant="ghost" onClick={() => void accion({ accion: "estado_asesoria", id: a.id, activa: !a.activa })}>{a.activa ? "Suspender" : "Reactivar"}</Button>
               </div>
             </li>

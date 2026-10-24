@@ -4,7 +4,7 @@ import {
   actualizarCodigo, actualizarSolicitud, actualizarValoracion, contarNuevas, contarPendientes, crearCodigo,
   eliminarSolicitud, eliminarValoracion, listarCodigos, listarSolicitudes, listarValoraciones, regenerarCodigo,
 } from "@/lib/piloto/db.server";
-import { crearAsesoria, estadoAsesoria, listarAsesorias, resetPasswordPlataforma } from "@/lib/erp/db.server";
+import { crearAsesoria, estadoAsesoria, listarAsesorias, planAsesoria, resetPasswordPlataforma } from "@/lib/erp/db.server";
 import { cookieBorrar, cookieSet, crearSesionAdmin, esAdmin, igualesSeguro, pausa } from "@/lib/piloto/sesion.server";
 
 const ESTADOS = ["pendiente", "revisada", "corregida", "descartada"];
@@ -99,6 +99,11 @@ export const Route = createFileRoute("/api/admin")({
           const id = num(body.id);
           if (id === null) return Response.json({ error: "Falta el identificador." }, { status: 400 });
 
+          if (accion === "plan_asesoria") {
+            if (body.plan !== "gratis" && body.plan !== "premium") return Response.json({ error: "Plan no válido." }, { status: 400 });
+            await planAsesoria(id, body.plan);
+            return Response.json({ ok: true });
+          }
           if (accion === "estado_asesoria") {
             await estadoAsesoria(id, body.activa === true);
             return Response.json({ ok: true });

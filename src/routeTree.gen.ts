@@ -18,6 +18,7 @@ import { Route as ApiAccesoRouteImport } from './routes/api/acceso'
 import { Route as ApiAdminRouteImport } from './routes/api/admin'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiErpRouteImport } from './routes/api/erp'
+import { Route as ApiErpChatRouteImport } from './routes/api/erp-chat'
 import { Route as ApiSolicitudRouteImport } from './routes/api/solicitud'
 import { Route as ApiValoracionRouteImport } from './routes/api/valoracion'
 import { Route as LegalDocRouteImport } from './routes/legal.$doc'
@@ -67,6 +68,11 @@ const ApiErpRoute = ApiErpRouteImport.update({
   path: '/api/erp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiErpChatRoute = ApiErpChatRouteImport.update({
+  id: '/api/erp-chat',
+  path: '/api/erp-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSolicitudRoute = ApiSolicitudRouteImport.update({
   id: '/api/solicitud',
   path: '/api/solicitud',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/api/admin': typeof ApiAdminRoute
   '/api/chat': typeof ApiChatRoute
   '/api/erp': typeof ApiErpRoute
+  '/api/erp-chat': typeof ApiErpChatRoute
   '/api/solicitud': typeof ApiSolicitudRoute
   '/api/valoracion': typeof ApiValoracionRoute
   '/legal/$doc': typeof LegalDocRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/api/admin': typeof ApiAdminRoute
   '/api/chat': typeof ApiChatRoute
   '/api/erp': typeof ApiErpRoute
+  '/api/erp-chat': typeof ApiErpChatRoute
   '/api/solicitud': typeof ApiSolicitudRoute
   '/api/valoracion': typeof ApiValoracionRoute
   '/legal/$doc': typeof LegalDocRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/api/admin': typeof ApiAdminRoute
   '/api/chat': typeof ApiChatRoute
   '/api/erp': typeof ApiErpRoute
+  '/api/erp-chat': typeof ApiErpChatRoute
   '/api/solicitud': typeof ApiSolicitudRoute
   '/api/valoracion': typeof ApiValoracionRoute
   '/legal/$doc': typeof LegalDocRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/api/admin'
     | '/api/chat'
     | '/api/erp'
+    | '/api/erp-chat'
     | '/api/solicitud'
     | '/api/valoracion'
     | '/legal/$doc'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/api/admin'
     | '/api/chat'
     | '/api/erp'
+    | '/api/erp-chat'
     | '/api/solicitud'
     | '/api/valoracion'
     | '/legal/$doc'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/api/admin'
     | '/api/chat'
     | '/api/erp'
+    | '/api/erp-chat'
     | '/api/solicitud'
     | '/api/valoracion'
     | '/legal/$doc'
@@ -181,6 +193,7 @@ export interface RootRouteChildren {
   ApiAdminRoute: typeof ApiAdminRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiErpRoute: typeof ApiErpRoute
+  ApiErpChatRoute: typeof ApiErpChatRoute
   ApiSolicitudRoute: typeof ApiSolicitudRoute
   ApiValoracionRoute: typeof ApiValoracionRoute
   LegalDocRoute: typeof LegalDocRoute
@@ -251,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiErpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/erp-chat': {
+      id: '/api/erp-chat'
+      path: '/api/erp-chat'
+      fullPath: '/api/erp-chat'
+      preLoaderRoute: typeof ApiErpChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/solicitud': {
       id: '/api/solicitud'
       path: '/api/solicitud'
@@ -285,6 +305,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminRoute: ApiAdminRoute,
   ApiChatRoute: ApiChatRoute,
   ApiErpRoute: ApiErpRoute,
+  ApiErpChatRoute: ApiErpChatRoute,
   ApiSolicitudRoute: ApiSolicitudRoute,
   ApiValoracionRoute: ApiValoracionRoute,
   LegalDocRoute: LegalDocRoute,

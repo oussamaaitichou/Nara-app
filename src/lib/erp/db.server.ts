@@ -13,6 +13,15 @@ function asegurar(): Promise<void> {
     await q(`create unique index if not exists erp_usuarios_email on erp_usuarios (lower(email))`);
     await q(`create table if not exists erp_datos_mensuales (farmacia_id integer not null references erp_farmacias(id) on delete cascade, periodo text not null, ventas numeric(14,2) not null default 0, compras numeric(14,2) not null default 0, personal numeric(14,2) not null default 0, alquiler numeric(14,2) not null default 0, otros numeric(14,2) not null default 0, actualizado timestamptz not null default now(), primary key (farmacia_id, periodo))`);
     await q(`create table if not exists erp_auditoria (id serial primary key, ts timestamptz not null default now(), usuario_id integer, asesoria_id integer, accion text not null, detalle text)`);
+    await q(`alter table erp_asesorias add column if not exists plan text not null default 'gratis'`);
+    await q(`create table if not exists erp_conversaciones (id serial primary key, usuario_id integer not null references erp_usuarios(id) on delete cascade, titulo text not null, creado timestamptz not null default now(), actualizado timestamptz not null default now())`);
+    await q(`create index if not exists erp_conv_usuario on erp_conversaciones (usuario_id, actualizado desc)`);
+    await q(`alter table erp_conversaciones add column if not exists resumen text`);
+    await q(`alter table erp_conversaciones add column if not exists resumido_hasta integer not null default 0`);
+    await q(`create table if not exists erp_mensajes (id serial primary key, conversacion_id integer not null references erp_conversaciones(id) on delete cascade, rol text not null check (rol in ('user','assistant')), contenido text not null, adjuntos text, creado timestamptz not null default now())`);
+    await q(`create index if not exists erp_msg_conv on erp_mensajes (conversacion_id, id)`);
+    await q(`create table if not exists erp_archivos_uso (id serial primary key, usuario_id integer not null references erp_usuarios(id) on delete cascade, ts timestamptz not null default now(), nombre text not null, tipo text not null, tam integer not null)`);
+    await q(`create index if not exists erp_arch_usuario on erp_archivos_uso (usuario_id, ts)`);
   })().catch((e) => {
     listo = null;
     throw e;
@@ -27,7 +36,7 @@ const db = async () => {
 export type Rol = "asesoria_admin" | "asesoria_staff" | "cliente";
 export type UsuarioCtx = {
   id: number; asesoria_id: number; farmacia_id: number | null; email: string; nombre: string; rol: Rol; debe_cambiar: boolean;
-  activo: boolean; version: number; asesoria_nombre: string; logo: string | null; asesoria_activa: boolean;
+  activo: boolean; version: number; asesoria_nombre: string; logo: string | null; asesoria_activa: boolean; plan: "gratis" | "premium";
 };
 export type FarmaciaFila = { id: number; nombre: string; ccaa: string | null; titular: string | null; activa: boolean; meses: number };
 
@@ -52,8 +61,8 @@ export async function crearAsesoria(nombre: string, adminEmail: string, adminNom
 }
 export async function listarAsesorias() {
   const sql = await db();
-  return sql<{ id: number; nombre: string; activa: boolean; creado: string; farmacias: number; usuarios: number; admin_id: number | null; admin_email: string | null }>`
-    select a.id, a.nombre, a.activa, a.creado,
+  return sql<{ id: number; nombre: string; activa: boolean; plan: string; creado: string; farmacias: number; usuarios: number; admin_id: number | null; admin_email: string | null }>`
+    select a.id, a.nombre, a.activa, a.plan, a.creado,
       (select count(*) from erp_farmacias f where f.asesoria_id = a.id) as farmacias,
       (select count(*) from erp_usuarios u where u.asesoria_id = a.id) as usuarios,
       (select u.id from erp_usuarios u where u.asesoria_id = a.id and u.rol = 'asesoria_admin' order by u.id limit 1) as admin_id,
@@ -85,7 +94,7 @@ export async function usuarioPorEmail(email: string) {
 export async function usuarioCtx(id: number): Promise<UsuarioCtx | null> {
   const sql = await db();
   const r = await sql<UsuarioCtx>`
-    select u.id, u.asesoria_id, u.farmacia_id, u.email, u.nombre, u.rol, u.debe_cambiar, u.activo, u.version, a.nombre as asesoria_nombre, a.logo, a.activa as asesoria_activa
+    select u.id, u.asesoria_id, u.farmacia_id, u.email, u.nombre, u.rol, u.debe_cambiar, u.activo, u.version, a.nombre as asesoria_nombre, a.logo, a.activa as asesoria_activa, a.plan
     from erp_usuarios u join erp_asesorias a on a.id = u.asesoria_id where u.id = ${id}`;
   return r[0] ?? null;
 }
@@ -167,4 +176,65 @@ export async function importarDatos(farmaciaId: number, filas: FilaMes[]) {
 export async function borrarMes(farmaciaId: number, periodo: string) {
   const sql = await db();
   await sql`delete from erp_datos_mensuales where farmacia_id = ${farmaciaId} and periodo = ${periodo}`;
+}
+
+export async function planAsesoria(id: number, plan: "gratis" | "premium") {
+  const sql = await db();
+  await sql`update erp_asesorias set plan = ${plan} where id = ${id}`;
+  await auditar(null, id, "plan_asesoria", plan);
+}
+
+// ---------- Chat del ERP: conversaciones guardadas y cuotas
+export type ConversacionFila = { id: number; titulo: string; actualizado: string };
+export type ConversacionDetalle = ConversacionFila & { resumen: string | null; resumido_hasta: number };
+export type MensajeFila = { id: number; rol: "user" | "assistant"; contenido: string; adjuntos: string | null; creado: string };
+
+export async function listarConversaciones(usuarioId: number) {
+  const sql = await db();
+  return sql<ConversacionFila>`select id, titulo, actualizado from erp_conversaciones where usuario_id = ${usuarioId} order by actualizado desc limit 100`;
+}
+export async function conversacionDe(id: number, usuarioId: number): Promise<ConversacionDetalle | null> {
+  const sql = await db();
+  const r = await sql<ConversacionDetalle>`select id, titulo, actualizado, resumen, resumido_hasta from erp_conversaciones where id = ${id} and usuario_id = ${usuarioId}`;
+  return r[0] ?? null;
+}
+export async function crearConversacion(usuarioId: number, titulo: string) {
+  const sql = await db();
+  const r = await sql<{ id: number }>`insert into erp_conversaciones (usuario_id, titulo) values (${usuarioId}, ${titulo}) returning id`;
+  return r[0]!.id;
+}
+export async function mensajesDe(conversacionId: number, ultimos = 200) {
+  const sql = await db();
+  return sql<MensajeFila>`select id, rol, contenido, adjuntos, creado from (select id, rol, contenido, adjuntos, creado from erp_mensajes where conversacion_id = ${conversacionId} order by id desc limit ${ultimos}) t order by id`;
+}
+export async function mensajesDesde(conversacionId: number, desdeId: number, limite = 400) {
+  const sql = await db();
+  return sql<MensajeFila>`select id, rol, contenido, adjuntos, creado from (select id, rol, contenido, adjuntos, creado from erp_mensajes where conversacion_id = ${conversacionId} and id > ${desdeId} order by id desc limit ${limite}) t order by id`;
+}
+export async function guardarMensaje(conversacionId: number, rol: "user" | "assistant", contenido: string, adjuntos: string | null) {
+  const sql = await db();
+  await sql`insert into erp_mensajes (conversacion_id, rol, contenido, adjuntos) values (${conversacionId}, ${rol}, ${contenido}, ${adjuntos})`;
+  await sql`update erp_conversaciones set actualizado = now() where id = ${conversacionId}`;
+}
+export async function guardarResumen(conversacionId: number, resumen: string, hastaId: number) {
+  const sql = await db();
+  await sql`update erp_conversaciones set resumen = ${resumen}, resumido_hasta = ${hastaId} where id = ${conversacionId}`;
+}
+export async function borrarConversacion(id: number, usuarioId: number) {
+  const sql = await db();
+  await sql`delete from erp_conversaciones where id = ${id} and usuario_id = ${usuarioId}`;
+}
+export async function mensajesHoy(usuarioId: number): Promise<number> {
+  const sql = await db();
+  const r = await sql<{ n: number }>`select count(*) as n from erp_mensajes m join erp_conversaciones c on c.id = m.conversacion_id where c.usuario_id = ${usuarioId} and m.rol = 'user' and m.creado > now() - interval '24 hours'`;
+  return r[0]?.n ?? 0;
+}
+export async function archivosUsados(usuarioId: number): Promise<{ usados: number; masAntiguo: string | null }> {
+  const sql = await db();
+  const r = await sql<{ usados: number; antiguo: string | null }>`select count(*) as usados, min(ts) as antiguo from erp_archivos_uso where usuario_id = ${usuarioId} and ts > now() - interval '12 hours'`;
+  return { usados: r[0]?.usados ?? 0, masAntiguo: r[0]?.antiguo ?? null };
+}
+export async function registrarArchivos(usuarioId: number, items: { nombre: string; tipo: string; tam: number }[]) {
+  const sql = await db();
+  for (const a of items) await sql`insert into erp_archivos_uso (usuario_id, nombre, tipo, tam) values (${usuarioId}, ${a.nombre}, ${a.tipo}, ${a.tam})`;
 }
