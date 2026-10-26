@@ -1,0 +1,27 @@
+NARA — PAQUETE DE CAMBIOS
+
+NUEVOS:
+  src/lib/piloto/password.server.ts
+  src/routes/api/registro.ts
+  src/routes/login.tsx
+  src/routes/registro.tsx
+  DOCUMENTACION.md
+  GUIA-ACCESO.md
+
+SUSTITUIR:
+  src/lib/piloto/db.server.ts
+  src/lib/piloto/sesion.server.ts
+  src/lib/piloto/config.server.ts (si difiere)
+  src/lib/chat/cerebro.ts
+  src/routes/admin.tsx
+  src/routes/api/admin.ts
+  src/routes/api/acceso.ts
+  src/routes/api/chat.ts
+  src/components/chat/chat-app.tsx
+  LEEME.md
+  .env.example
+
+ACTIVAR ARCHIVOS EN VERCEL:
+  ARCHIVOS_ACTIVOS=si
+
+Luego: git add . && git commit && git push
