@@ -1,0 +1,22 @@
+NARA FASE A — Panel + menú lateral + chat en shell (colores farmacia)
+
+Copia en tu proyecto Nara-app:
+
+  src/components/layout/app-shell.tsx   (NUEVO)
+  src/components/layout/site-header.tsx (sustituir)
+  src/routes/panel.tsx                  (NUEVO)
+  src/routes/consulta.tsx               (sustituir)
+  src/routes/index.tsx                  (sustituir)
+  src/styles.css                        (sustituir)
+
+Luego:
+  git add .
+  git commit -m "Fase A: panel ERP farmacia, menu lateral y chat"
+  git push
+
+Prueba:
+  /panel     → panel de la farmacia
+  /consulta  → chat dentro del marco con menu
+  /          → landing pública
+
+NaraGest (fichaje, tareas…) vendrá en fases siguientes.
