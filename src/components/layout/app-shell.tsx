@@ -36,6 +36,7 @@ const NAV: ShellItem[] = [
   { to: "/erp", label: "Clientes", icon: Users, match: () => false, section: "Equipo" },
   { to: "/erp", label: "Personal", icon: UserCircle2, match: () => false },
   { to: "/valorar", label: "Valorar farmacia", icon: Star, match: (p) => p.startsWith("/valorar"), section: "Más" },
+  { to: "/login", label: "Acceso", icon: KeyRound, match: (p) => p.startsWith("/login") },
   { to: "/admin", label: "Admin", icon: Settings, match: (p) => p.startsWith("/admin") },
 ];
 
@@ -113,11 +114,11 @@ export function AppShell({
             <p className="mt-0.5 text-sm font-medium text-white/90">Abierto</p>
           </div>
           <Link
-            to="/"
+            to="/login"
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 transition hover:bg-white/8 hover:text-white"
           >
             <LogOut className="size-4" />
-            Cerrar sesión
+            Acceso / sesión
           </Link>
           <p className="mt-2 px-3 text-[10px] leading-relaxed text-white/35">
             Conexión segura · Datos protegidos
@@ -167,12 +168,12 @@ export function AppShell({
               <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
               <div className="mt-auto border-t border-white/10 p-3">
                 <Link
-                  to="/"
+                  to="/login"
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60"
                 >
                   <LogOut className="size-4" />
-                  Cerrar sesión
+                  Acceso / sesión
                 </Link>
               </div>
             </div>
