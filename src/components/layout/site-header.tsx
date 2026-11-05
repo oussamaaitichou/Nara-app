@@ -14,21 +14,18 @@ export function SiteHeader({ solid = false }: { solid?: boolean }) {
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:h-[4.25rem] sm:px-6">
         <NaraWordmark />
-        <nav className="flex items-center gap-1 sm:gap-2">
+        <nav className="flex items-center gap-2 sm:gap-3">
           <Link
-            to="/panel"
+            to="/consulta"
             className="hidden h-11 items-center px-3 text-sm font-medium text-muted hover:text-ink sm:inline-flex"
           >
-            Panel
+            Probar consulta
           </Link>
-          <Link
-            to="/valorar"
-            className="hidden h-11 items-center px-3 text-sm font-medium text-muted hover:text-ink sm:inline-flex"
-          >
-            Valorar farmacia
-          </Link>
-          <Button asChild size="sm">
-            <Link to="/consulta">Consultar a Nara</Link>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/login">Acceder</Link>
+          </Button>
+          <Button asChild size="sm" className="sm:hidden">
+            <Link to="/consulta">Consultar</Link>
           </Button>
         </nav>
       </div>
