@@ -8,6 +8,7 @@ import {
   exportClientsCsv,
   fetchClients,
   type ApiClient,
+  type NgMeta,
 } from "@/lib/naragest/client-api";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
@@ -21,6 +22,7 @@ type FilterKey = "todos" | "fidelizacion" | "spd" | "activo";
 function ClientesFPage() {
   const { user, isPending: authPending } = useCurrentUserState();
   const [rows, setRows] = useState<ApiClient[]>([]);
+  const [meta, setMeta] = useState<NgMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKey>("todos");
@@ -37,8 +39,9 @@ function ClientesFPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchClients();
-      setRows(data);
+      const res = await fetchClients();
+      setRows(res.data ?? []);
+      setMeta(res.meta ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar clientes");
     } finally {
@@ -50,6 +53,10 @@ function ClientesFPage() {
     if (authPending) return;
     void load();
   }, [authPending, load]);
+
+  const canWrite = meta?.canWrite !== false;
+  const canDelete = meta?.canDelete !== false;
+  const canExport = meta?.canExport !== false;
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
@@ -131,25 +138,30 @@ function ClientesFPage() {
                 <p className="text-[11px] text-slate-400">
                   Sesión: {user.displayName ?? user.primaryEmail ?? user.id}
                   {user.isDevFallback ? " · modo desarrollo" : ""}
+                  {meta ? ` · ${meta.roleId}` : ""}
                 </p>
               ) : null}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void onExport()}
-              className="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700"
-            >
-              <Download className="size-4" /> CSV
-            </button>
-            <button
-              type="button"
-              onClick={() => setOpenForm((v) => !v)}
-              className="inline-flex h-10 items-center gap-2 rounded-full bg-[#3B6EF5] px-4 text-sm font-semibold text-white"
-            >
-              <Plus className="size-4" /> Nuevo cliente
-            </button>
+            {canExport ? (
+              <button
+                type="button"
+                onClick={() => void onExport()}
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700"
+              >
+                <Download className="size-4" /> CSV
+              </button>
+            ) : null}
+            {canWrite ? (
+              <button
+                type="button"
+                onClick={() => setOpenForm((v) => !v)}
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-[#3B6EF5] px-4 text-sm font-semibold text-white"
+              >
+                <Plus className="size-4" /> Nuevo cliente
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -171,10 +183,10 @@ function ClientesFPage() {
           ))}
         </div>
 
-        {openForm ? (
+        {openForm && canWrite ? (
           <form
             onSubmit={(e) => void onCreate(e)}
-            className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-3"
+            className="space-y-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
           >
             <h3 className="font-display text-lg font-semibold text-slate-900">Alta de cliente</h3>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -303,14 +315,16 @@ function ClientesFPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => void onDelete(r.id)}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700"
-                          aria-label="Archivar"
-                        >
-                          <Trash2 className="size-3.5" /> Archivar
-                        </button>
+                        {canDelete ? (
+                          <button
+                            type="button"
+                            onClick={() => void onDelete(r.id)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700"
+                            aria-label="Archivar"
+                          >
+                            <Trash2 className="size-3.5" /> Archivar
+                          </button>
+                        ) : null}
                       </td>
                     </tr>
                   ))}
