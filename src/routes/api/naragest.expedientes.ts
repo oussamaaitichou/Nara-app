@@ -1,30 +1,36 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { canWrite, resolveNgAccess } from "@/lib/naragest/access.server";
 import { createCase, listCases, updateCase } from "@/lib/naragest/repo.server";
 import { createCaseSchema, updateCaseSchema } from "@/lib/naragest/schema";
-
-function ctx(request: Request) {
-  const organizationId = request.headers.get("x-ng-org-id")?.trim();
-  const actorUserId = request.headers.get("x-ng-user-id")?.trim() ?? null;
-  if (!organizationId) {
-    return { error: Response.json({ error: "Falta organización (x-ng-org-id)." }, { status: 401 }) };
-  }
-  return { organizationId, actorUserId };
-}
 
 export const Route = createFileRoute("/api/naragest/expedientes")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const c = ctx(request);
-        if ("error" in c) return c.error;
+        const resolved = await resolveNgAccess(request);
+        if (!resolved.ok) {
+          return Response.json({ error: resolved.error }, { status: resolved.status });
+        }
         const clientId = new URL(request.url).searchParams.get("clientId") ?? undefined;
-        const rows = await listCases(c.organizationId, clientId);
-        return Response.json({ data: rows });
+        const rows = await listCases(resolved.access.organizationId, clientId);
+        return Response.json({
+          data: rows,
+          meta: {
+            organizationId: resolved.access.organizationId,
+            roleId: resolved.access.roleId,
+            canWrite: canWrite(resolved.access.roleId),
+          },
+        });
       },
 
       POST: async ({ request }) => {
-        const c = ctx(request);
-        if ("error" in c) return c.error;
+        const resolved = await resolveNgAccess(request);
+        if (!resolved.ok) {
+          return Response.json({ error: resolved.error }, { status: resolved.status });
+        }
+        if (!canWrite(resolved.access.roleId)) {
+          return Response.json({ error: "Sin permiso de escritura" }, { status: 403 });
+        }
         let body: unknown;
         try {
           body = await request.json();
@@ -36,7 +42,11 @@ export const Route = createFileRoute("/api/naragest/expedientes")({
           return Response.json({ error: "Validación", details: parsed.error.flatten() }, { status: 422 });
         }
         try {
-          const row = await createCase(c.organizationId, c.actorUserId, parsed.data);
+          const row = await createCase(
+            resolved.access.organizationId,
+            resolved.access.userId,
+            parsed.data,
+          );
           return Response.json({ data: row }, { status: 201 });
         } catch (e) {
           return Response.json({ error: e instanceof Error ? e.message : "Error" }, { status: 400 });
@@ -44,8 +54,13 @@ export const Route = createFileRoute("/api/naragest/expedientes")({
       },
 
       PATCH: async ({ request }) => {
-        const c = ctx(request);
-        if ("error" in c) return c.error;
+        const resolved = await resolveNgAccess(request);
+        if (!resolved.ok) {
+          return Response.json({ error: resolved.error }, { status: resolved.status });
+        }
+        if (!canWrite(resolved.access.roleId)) {
+          return Response.json({ error: "Sin permiso de escritura" }, { status: 403 });
+        }
         let body: unknown;
         try {
           body = await request.json();
@@ -58,7 +73,12 @@ export const Route = createFileRoute("/api/naragest/expedientes")({
         if (!parsed.success) {
           return Response.json({ error: "Validación", details: parsed.error.flatten() }, { status: 422 });
         }
-        const row = await updateCase(c.organizationId, c.actorUserId, id, parsed.data);
+        const row = await updateCase(
+          resolved.access.organizationId,
+          resolved.access.userId,
+          id,
+          parsed.data,
+        );
         if (!row) return Response.json({ error: "No encontrado" }, { status: 404 });
         return Response.json({ data: row });
       },
