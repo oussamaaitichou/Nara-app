@@ -17,9 +17,11 @@ import { Route as ConsultaRouteImport } from './routes/consulta'
 import { Route as DocumentosRouteImport } from './routes/documentos'
 import { Route as EquipoRouteImport } from './routes/equipo'
 import { Route as ErpRouteImport } from './routes/erp'
+import { Route as ExpedientesRouteImport } from './routes/expedientes'
 import { Route as InformesRouteImport } from './routes/informes'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PanelRouteImport } from './routes/panel'
+import { Route as RentabilidadRouteImport } from './routes/rentabilidad'
 import { Route as ServiciosFRouteImport } from './routes/servicios-f'
 import { Route as StockRouteImport } from './routes/stock'
 import { Route as TareasRouteImport } from './routes/tareas'
@@ -30,6 +32,11 @@ import { Route as ApiAdminRouteImport } from './routes/api/admin'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiErpRouteImport } from './routes/api/erp'
 import { Route as ApiErpChatRouteImport } from './routes/api/erp-chat'
+import { Route as ApiNaragestClientesRouteImport } from './routes/api/naragest.clientes'
+import { Route as ApiNaragestComprasRouteImport } from './routes/api/naragest.compras'
+import { Route as ApiNaragestExpedientesRouteImport } from './routes/api/naragest.expedientes'
+import { Route as ApiNaragestRentabilidadRouteImport } from './routes/api/naragest.rentabilidad'
+import { Route as ApiNaragestVentasRouteImport } from './routes/api/naragest.ventas'
 import { Route as ApiSolicitudRouteImport } from './routes/api/solicitud'
 import { Route as ApiValoracionRouteImport } from './routes/api/valoracion'
 import { Route as LegalDocRouteImport } from './routes/legal.$doc'
@@ -47,9 +54,11 @@ const ConsultaRoute = ConsultaRouteImport.update({ id: '/consulta', path: '/cons
 const DocumentosRoute = DocumentosRouteImport.update({ id: '/documentos', path: '/documentos', getParentRoute: () => rootRouteImport } as any)
 const EquipoRoute = EquipoRouteImport.update({ id: '/equipo', path: '/equipo', getParentRoute: () => rootRouteImport } as any)
 const ErpRoute = ErpRouteImport.update({ id: '/erp', path: '/erp', getParentRoute: () => rootRouteImport } as any)
+const ExpedientesRoute = ExpedientesRouteImport.update({ id: '/expedientes', path: '/expedientes', getParentRoute: () => rootRouteImport } as any)
 const InformesRoute = InformesRouteImport.update({ id: '/informes', path: '/informes', getParentRoute: () => rootRouteImport } as any)
 const LoginRoute = LoginRouteImport.update({ id: '/login', path: '/login', getParentRoute: () => rootRouteImport } as any)
 const PanelRoute = PanelRouteImport.update({ id: '/panel', path: '/panel', getParentRoute: () => rootRouteImport } as any)
+const RentabilidadRoute = RentabilidadRouteImport.update({ id: '/rentabilidad', path: '/rentabilidad', getParentRoute: () => rootRouteImport } as any)
 const ServiciosFRoute = ServiciosFRouteImport.update({ id: '/servicios-f', path: '/servicios-f', getParentRoute: () => rootRouteImport } as any)
 const StockRoute = StockRouteImport.update({ id: '/stock', path: '/stock', getParentRoute: () => rootRouteImport } as any)
 const TareasRoute = TareasRouteImport.update({ id: '/tareas', path: '/tareas', getParentRoute: () => rootRouteImport } as any)
@@ -60,6 +69,11 @@ const ApiAdminRoute = ApiAdminRouteImport.update({ id: '/api/admin', path: '/api
 const ApiChatRoute = ApiChatRouteImport.update({ id: '/api/chat', path: '/api/chat', getParentRoute: () => rootRouteImport } as any)
 const ApiErpRoute = ApiErpRouteImport.update({ id: '/api/erp', path: '/api/erp', getParentRoute: () => rootRouteImport } as any)
 const ApiErpChatRoute = ApiErpChatRouteImport.update({ id: '/api/erp-chat', path: '/api/erp-chat', getParentRoute: () => rootRouteImport } as any)
+const ApiNaragestClientesRoute = ApiNaragestClientesRouteImport.update({ id: '/api/naragest/clientes', path: '/api/naragest/clientes', getParentRoute: () => rootRouteImport } as any)
+const ApiNaragestComprasRoute = ApiNaragestComprasRouteImport.update({ id: '/api/naragest/compras', path: '/api/naragest/compras', getParentRoute: () => rootRouteImport } as any)
+const ApiNaragestExpedientesRoute = ApiNaragestExpedientesRouteImport.update({ id: '/api/naragest/expedientes', path: '/api/naragest/expedientes', getParentRoute: () => rootRouteImport } as any)
+const ApiNaragestRentabilidadRoute = ApiNaragestRentabilidadRouteImport.update({ id: '/api/naragest/rentabilidad', path: '/api/naragest/rentabilidad', getParentRoute: () => rootRouteImport } as any)
+const ApiNaragestVentasRoute = ApiNaragestVentasRouteImport.update({ id: '/api/naragest/ventas', path: '/api/naragest/ventas', getParentRoute: () => rootRouteImport } as any)
 const ApiSolicitudRoute = ApiSolicitudRouteImport.update({ id: '/api/solicitud', path: '/api/solicitud', getParentRoute: () => rootRouteImport } as any)
 const ApiValoracionRoute = ApiValoracionRouteImport.update({ id: '/api/valoracion', path: '/api/valoracion', getParentRoute: () => rootRouteImport } as any)
 const LegalDocRoute = LegalDocRouteImport.update({ id: '/legal/$doc', path: '/legal/$doc', getParentRoute: () => rootRouteImport } as any)
@@ -78,9 +92,11 @@ export interface FileRoutesByFullPath {
   '/documentos': typeof DocumentosRoute
   '/equipo': typeof EquipoRoute
   '/erp': typeof ErpRoute
+  '/expedientes': typeof ExpedientesRoute
   '/informes': typeof InformesRoute
   '/login': typeof LoginRoute
   '/panel': typeof PanelRoute
+  '/rentabilidad': typeof RentabilidadRoute
   '/servicios-f': typeof ServiciosFRoute
   '/stock': typeof StockRoute
   '/tareas': typeof TareasRoute
@@ -91,6 +107,11 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/erp': typeof ApiErpRoute
   '/api/erp-chat': typeof ApiErpChatRoute
+  '/api/naragest/clientes': typeof ApiNaragestClientesRoute
+  '/api/naragest/compras': typeof ApiNaragestComprasRoute
+  '/api/naragest/expedientes': typeof ApiNaragestExpedientesRoute
+  '/api/naragest/rentabilidad': typeof ApiNaragestRentabilidadRoute
+  '/api/naragest/ventas': typeof ApiNaragestVentasRoute
   '/api/solicitud': typeof ApiSolicitudRoute
   '/api/valoracion': typeof ApiValoracionRoute
   '/legal/$doc': typeof LegalDocRoute
@@ -109,9 +130,11 @@ export interface FileRoutesByTo {
   '/documentos': typeof DocumentosRoute
   '/equipo': typeof EquipoRoute
   '/erp': typeof ErpRoute
+  '/expedientes': typeof ExpedientesRoute
   '/informes': typeof InformesRoute
   '/login': typeof LoginRoute
   '/panel': typeof PanelRoute
+  '/rentabilidad': typeof RentabilidadRoute
   '/servicios-f': typeof ServiciosFRoute
   '/stock': typeof StockRoute
   '/tareas': typeof TareasRoute
@@ -122,6 +145,11 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/erp': typeof ApiErpRoute
   '/api/erp-chat': typeof ApiErpChatRoute
+  '/api/naragest/clientes': typeof ApiNaragestClientesRoute
+  '/api/naragest/compras': typeof ApiNaragestComprasRoute
+  '/api/naragest/expedientes': typeof ApiNaragestExpedientesRoute
+  '/api/naragest/rentabilidad': typeof ApiNaragestRentabilidadRoute
+  '/api/naragest/ventas': typeof ApiNaragestVentasRoute
   '/api/solicitud': typeof ApiSolicitudRoute
   '/api/valoracion': typeof ApiValoracionRoute
   '/legal/$doc': typeof LegalDocRoute
@@ -141,9 +169,11 @@ export interface FileRoutesById {
   '/documentos': typeof DocumentosRoute
   '/equipo': typeof EquipoRoute
   '/erp': typeof ErpRoute
+  '/expedientes': typeof ExpedientesRoute
   '/informes': typeof InformesRoute
   '/login': typeof LoginRoute
   '/panel': typeof PanelRoute
+  '/rentabilidad': typeof RentabilidadRoute
   '/servicios-f': typeof ServiciosFRoute
   '/stock': typeof StockRoute
   '/tareas': typeof TareasRoute
@@ -154,6 +184,11 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/erp': typeof ApiErpRoute
   '/api/erp-chat': typeof ApiErpChatRoute
+  '/api/naragest/clientes': typeof ApiNaragestClientesRoute
+  '/api/naragest/compras': typeof ApiNaragestComprasRoute
+  '/api/naragest/expedientes': typeof ApiNaragestExpedientesRoute
+  '/api/naragest/rentabilidad': typeof ApiNaragestRentabilidadRoute
+  '/api/naragest/ventas': typeof ApiNaragestVentasRoute
   '/api/solicitud': typeof ApiSolicitudRoute
   '/api/valoracion': typeof ApiValoracionRoute
   '/legal/$doc': typeof LegalDocRoute
@@ -180,9 +215,11 @@ export interface RootRouteChildren {
   DocumentosRoute: typeof DocumentosRoute
   EquipoRoute: typeof EquipoRoute
   ErpRoute: typeof ErpRoute
+  ExpedientesRoute: typeof ExpedientesRoute
   InformesRoute: typeof InformesRoute
   LoginRoute: typeof LoginRoute
   PanelRoute: typeof PanelRoute
+  RentabilidadRoute: typeof RentabilidadRoute
   ServiciosFRoute: typeof ServiciosFRoute
   StockRoute: typeof StockRoute
   TareasRoute: typeof TareasRoute
@@ -193,6 +230,11 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiErpRoute: typeof ApiErpRoute
   ApiErpChatRoute: typeof ApiErpChatRoute
+  ApiNaragestClientesRoute: typeof ApiNaragestClientesRoute
+  ApiNaragestComprasRoute: typeof ApiNaragestComprasRoute
+  ApiNaragestExpedientesRoute: typeof ApiNaragestExpedientesRoute
+  ApiNaragestRentabilidadRoute: typeof ApiNaragestRentabilidadRoute
+  ApiNaragestVentasRoute: typeof ApiNaragestVentasRoute
   ApiSolicitudRoute: typeof ApiSolicitudRoute
   ApiValoracionRoute: typeof ApiValoracionRoute
   LegalDocRoute: typeof LegalDocRoute
@@ -213,9 +255,11 @@ declare module '@tanstack/react-router' {
     '/documentos': { id: '/documentos'; path: '/documentos'; fullPath: '/documentos'; preLoaderRoute: typeof DocumentosRouteImport; parentRoute: typeof rootRouteImport }
     '/equipo': { id: '/equipo'; path: '/equipo'; fullPath: '/equipo'; preLoaderRoute: typeof EquipoRouteImport; parentRoute: typeof rootRouteImport }
     '/erp': { id: '/erp'; path: '/erp'; fullPath: '/erp'; preLoaderRoute: typeof ErpRouteImport; parentRoute: typeof rootRouteImport }
+    '/expedientes': { id: '/expedientes'; path: '/expedientes'; fullPath: '/expedientes'; preLoaderRoute: typeof ExpedientesRouteImport; parentRoute: typeof rootRouteImport }
     '/informes': { id: '/informes'; path: '/informes'; fullPath: '/informes'; preLoaderRoute: typeof InformesRouteImport; parentRoute: typeof rootRouteImport }
     '/login': { id: '/login'; path: '/login'; fullPath: '/login'; preLoaderRoute: typeof LoginRouteImport; parentRoute: typeof rootRouteImport }
     '/panel': { id: '/panel'; path: '/panel'; fullPath: '/panel'; preLoaderRoute: typeof PanelRouteImport; parentRoute: typeof rootRouteImport }
+    '/rentabilidad': { id: '/rentabilidad'; path: '/rentabilidad'; fullPath: '/rentabilidad'; preLoaderRoute: typeof RentabilidadRouteImport; parentRoute: typeof rootRouteImport }
     '/servicios-f': { id: '/servicios-f'; path: '/servicios-f'; fullPath: '/servicios-f'; preLoaderRoute: typeof ServiciosFRouteImport; parentRoute: typeof rootRouteImport }
     '/stock': { id: '/stock'; path: '/stock'; fullPath: '/stock'; preLoaderRoute: typeof StockRouteImport; parentRoute: typeof rootRouteImport }
     '/tareas': { id: '/tareas'; path: '/tareas'; fullPath: '/tareas'; preLoaderRoute: typeof TareasRouteImport; parentRoute: typeof rootRouteImport }
@@ -226,6 +270,11 @@ declare module '@tanstack/react-router' {
     '/api/chat': { id: '/api/chat'; path: '/api/chat'; fullPath: '/api/chat'; preLoaderRoute: typeof ApiChatRouteImport; parentRoute: typeof rootRouteImport }
     '/api/erp': { id: '/api/erp'; path: '/api/erp'; fullPath: '/api/erp'; preLoaderRoute: typeof ApiErpRouteImport; parentRoute: typeof rootRouteImport }
     '/api/erp-chat': { id: '/api/erp-chat'; path: '/api/erp-chat'; fullPath: '/api/erp-chat'; preLoaderRoute: typeof ApiErpChatRouteImport; parentRoute: typeof rootRouteImport }
+    '/api/naragest/clientes': { id: '/api/naragest/clientes'; path: '/api/naragest/clientes'; fullPath: '/api/naragest/clientes'; preLoaderRoute: typeof ApiNaragestClientesRouteImport; parentRoute: typeof rootRouteImport }
+    '/api/naragest/compras': { id: '/api/naragest/compras'; path: '/api/naragest/compras'; fullPath: '/api/naragest/compras'; preLoaderRoute: typeof ApiNaragestComprasRouteImport; parentRoute: typeof rootRouteImport }
+    '/api/naragest/expedientes': { id: '/api/naragest/expedientes'; path: '/api/naragest/expedientes'; fullPath: '/api/naragest/expedientes'; preLoaderRoute: typeof ApiNaragestExpedientesRouteImport; parentRoute: typeof rootRouteImport }
+    '/api/naragest/rentabilidad': { id: '/api/naragest/rentabilidad'; path: '/api/naragest/rentabilidad'; fullPath: '/api/naragest/rentabilidad'; preLoaderRoute: typeof ApiNaragestRentabilidadRouteImport; parentRoute: typeof rootRouteImport }
+    '/api/naragest/ventas': { id: '/api/naragest/ventas'; path: '/api/naragest/ventas'; fullPath: '/api/naragest/ventas'; preLoaderRoute: typeof ApiNaragestVentasRouteImport; parentRoute: typeof rootRouteImport }
     '/api/solicitud': { id: '/api/solicitud'; path: '/api/solicitud'; fullPath: '/api/solicitud'; preLoaderRoute: typeof ApiSolicitudRouteImport; parentRoute: typeof rootRouteImport }
     '/api/valoracion': { id: '/api/valoracion'; path: '/api/valoracion'; fullPath: '/api/valoracion'; preLoaderRoute: typeof ApiValoracionRouteImport; parentRoute: typeof rootRouteImport }
     '/legal/$doc': { id: '/legal/$doc'; path: '/legal/$doc'; fullPath: '/legal/$doc'; preLoaderRoute: typeof LegalDocRouteImport; parentRoute: typeof rootRouteImport }
@@ -246,9 +295,11 @@ const rootRouteChildren: RootRouteChildren = {
   DocumentosRoute,
   EquipoRoute,
   ErpRoute,
+  ExpedientesRoute,
   InformesRoute,
   LoginRoute,
   PanelRoute,
+  RentabilidadRoute,
   ServiciosFRoute,
   StockRoute,
   TareasRoute,
@@ -259,6 +310,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute,
   ApiErpRoute,
   ApiErpChatRoute,
+  ApiNaragestClientesRoute,
+  ApiNaragestComprasRoute,
+  ApiNaragestExpedientesRoute,
+  ApiNaragestRentabilidadRoute,
+  ApiNaragestVentasRoute,
   ApiSolicitudRoute,
   ApiValoracionRoute,
   LegalDocRoute,
