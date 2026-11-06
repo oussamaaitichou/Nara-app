@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Download, Plus, ShoppingCart, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import {
-  addPurchase,
-  loadPilot,
-  removePurchase,
-  updatePurchaseEstado,
-  type PilotPurchase,
-} from "@/lib/naragest/pilot-store";
+  apiCreatePurchase,
+  apiDeletePurchase,
+  apiListPurchases,
+  apiUpdatePurchaseStatus,
+} from "@/lib/naragest/commerce-api";
+import type { PilotPurchase } from "@/lib/naragest/pilot-store";
 
 export const Route = createFileRoute("/compras")({
   component: ComprasPage,
@@ -23,6 +23,7 @@ function eur(n: number) {
 
 function ComprasPage() {
   const [rows, setRows] = useState<PilotPurchase[]>([]);
+  const [loading, setLoading] = useState(true);
   const [periodo, setPeriodo] = useState<Periodo>("todo");
   const [proveedor, setProveedor] = useState("todos");
   const [open, setOpen] = useState(false);
@@ -35,13 +36,18 @@ function ComprasPage() {
     familia: "Genéricos",
   });
 
-  function refresh() {
-    setRows(loadPilot().purchases);
-  }
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      setRows(await apiListPurchases());
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    refresh();
-  }, []);
+    void refresh();
+  }, [refresh]);
 
   const proveedores = useMemo(
     () => ["todos", ...Array.from(new Set(rows.map((p) => p.proveedor)))],
@@ -74,20 +80,20 @@ function ComprasPage() {
     };
   }, [filtrados]);
 
-  function onAdd(e: React.FormEvent) {
+  async function onAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!form.proveedor.trim() || form.importe <= 0) return;
-    addPurchase({
-      proveedor: form.proveedor.trim(),
-      fecha: form.fecha,
-      lineas: Math.max(1, form.lineas),
-      importe: form.importe,
-      estado: form.estado,
-      familia: form.familia.trim() || "Otros",
+    await apiCreatePurchase({
+      supplier: form.proveedor.trim(),
+      purchaseDate: form.fecha,
+      linesCount: Math.max(1, form.lineas),
+      amount: form.importe,
+      status: form.estado,
+      family: form.familia.trim() || "Otros",
     });
     setOpen(false);
     setForm((f) => ({ ...f, lineas: 1, importe: 0 }));
-    refresh();
+    await refresh();
   }
 
   function exportCsv() {
@@ -105,14 +111,16 @@ function ComprasPage() {
   }
 
   return (
-    <AppShell title="Compras" subtitle="Pedidos reales del piloto · se guardan en este navegador">
+    <AppShell title="Compras" subtitle="Pedidos multi-farmacia · API + respaldo local">
       <div className="mx-auto max-w-6xl space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="flex size-10 items-center justify-center rounded-2xl bg-blue-50 text-[#3B6EF5]">
               <ShoppingCart className="size-5" />
             </span>
-            <p className="text-sm text-slate-500">{filtrados.length} pedidos en el filtro</p>
+            <p className="text-sm text-slate-500">
+              {loading ? "Cargando…" : `${filtrados.length} pedidos en el filtro`}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={exportCsv} className="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold">
@@ -125,7 +133,7 @@ function ComprasPage() {
         </div>
 
         {open ? (
-          <form onSubmit={onAdd} className="grid gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
+          <form onSubmit={(e) => void onAdd(e)} className="grid gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
             <h3 className="font-display text-lg font-semibold sm:col-span-2">Alta de pedido</h3>
             <label className="text-sm">Proveedor *
               <input required value={form.proveedor} onChange={(e) => setForm((f) => ({ ...f, proveedor: e.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" />
@@ -198,8 +206,7 @@ function ComprasPage() {
                       <select
                         value={p.estado}
                         onChange={(e) => {
-                          updatePurchaseEstado(p.id, e.target.value as PilotPurchase["estado"]);
-                          refresh();
+                          void apiUpdatePurchaseStatus(p.id, e.target.value).then(() => refresh());
                         }}
                         className="rounded-lg border border-slate-200 px-2 py-1 text-xs"
                       >
@@ -209,7 +216,7 @@ function ComprasPage() {
                       </select>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button type="button" onClick={() => { removePurchase(p.id); refresh(); }} className="inline-flex items-center gap-1 text-xs font-semibold text-red-600">
+                      <button type="button" onClick={() => void apiDeletePurchase(p.id).then(() => refresh())} className="inline-flex items-center gap-1 text-xs font-semibold text-red-600">
                         <Trash2 className="size-3.5" /> Borrar
                       </button>
                     </td>
@@ -218,7 +225,7 @@ function ComprasPage() {
               </tbody>
             </table>
           </div>
-          {filtrados.length === 0 ? <p className="p-8 text-center text-sm text-slate-500">No hay pedidos. Crea uno con «Nuevo pedido».</p> : null}
+          {!loading && filtrados.length === 0 ? <p className="p-8 text-center text-sm text-slate-500">No hay pedidos. Crea uno con «Nuevo pedido».</p> : null}
         </div>
       </div>
     </AppShell>
