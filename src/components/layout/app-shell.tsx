@@ -37,30 +37,37 @@ export type ShellItem = {
   badge?: number;
 };
 
+/** Nara = producto completo. NaraGest = gestión de la farmacia. */
 const NAV: ShellItem[] = [
-  { to: "/panel", label: "Inicio", icon: LayoutDashboard, match: (p) => p === "/panel" || p === "/" },
-  { to: "/consulta", label: "Consultar a Nara", icon: MessageSquare, match: (p) => p.startsWith("/consulta") },
-  { to: "/stock", label: "Stock y almacén", icon: Package, match: (p) => p.startsWith("/stock"), section: "Operativa", badge: 8 },
+  { to: "/consulta", label: "Consultar a Nara", icon: MessageSquare, match: (p) => p.startsWith("/consulta"), section: "Nara" },
+  { to: "/valorar", label: "Valorar farmacia", icon: Star, match: (p) => p.startsWith("/valorar") },
+  {
+    to: "/panel",
+    label: "NaraGest",
+    icon: LayoutDashboard,
+    match: (p) => p === "/panel",
+    section: "NaraGest",
+  },
+  { to: "/stock", label: "Stock y almacén", icon: Package, match: (p) => p.startsWith("/stock"), badge: 8 },
   { to: "/compras", label: "Compras", icon: ShoppingCart, match: (p) => p.startsWith("/compras") },
   { to: "/ventas", label: "Ventas y ticket", icon: Wallet, match: (p) => p.startsWith("/ventas") },
   { to: "/caducidades", label: "Caducidades", icon: AlertTriangle, match: (p) => p.startsWith("/caducidades"), badge: 12 },
   { to: "/caja", label: "Caja y tesorería", icon: BarChart3, match: (p) => p.startsWith("/caja") },
-  { to: "/clientes-f", label: "Clientes", icon: Users, match: (p) => p.startsWith("/clientes-f"), section: "Personas" },
+  { to: "/clientes-f", label: "Clientes", icon: Users, match: (p) => p.startsWith("/clientes-f"), section: "Equipo" },
   { to: "/equipo", label: "Equipo y turnos", icon: UserCircle2, match: (p) => p.startsWith("/equipo") },
   { to: "/tareas", label: "Tareas", icon: ClipboardList, match: (p) => p.startsWith("/tareas"), badge: 5 },
   { to: "/servicios-f", label: "Servicios", icon: Thermometer, match: (p) => p.startsWith("/servicios-f"), section: "Cumplimiento" },
   { to: "/documentos", label: "Documentación", icon: FileText, match: (p) => p.startsWith("/documentos") },
   { to: "/calendario", label: "Calendario", icon: CalendarDays, match: (p) => p.startsWith("/calendario") },
-  { to: "/informes", label: "Informes", icon: BarChart3, match: (p) => p.startsWith("/informes"), section: "Más" },
+  { to: "/informes", label: "Informes", icon: BarChart3, match: (p) => p.startsWith("/informes"), section: "Sistema" },
   { to: "/automatizaciones", label: "Automatizaciones", icon: Workflow, match: (p) => p.startsWith("/automatizaciones") },
-  { to: "/valorar", label: "Valorar farmacia", icon: Star, match: (p) => p.startsWith("/valorar") },
   { to: "/login", label: "Acceso", icon: KeyRound, match: (p) => p.startsWith("/login") },
   { to: "/configuracion", label: "Configuración", icon: Settings, match: (p) => p.startsWith("/configuracion") },
   { to: "/admin", label: "Admin", icon: Settings, match: (p) => p.startsWith("/admin") },
 ];
 
 const MOBILE_TABS = [
-  { to: "/panel", label: "Inicio", icon: LayoutDashboard, match: (p: string) => p === "/panel" || p === "/" },
+  { to: "/panel", label: "Gest", icon: LayoutDashboard, match: (p: string) => p === "/panel" },
   { to: "/consulta", label: "Nara", icon: MessageSquare, match: (p: string) => p.startsWith("/consulta") },
   { to: "/stock", label: "Stock", icon: Package, match: (p: string) => p.startsWith("/stock") },
   { to: "/tareas", label: "Tareas", icon: ClipboardList, match: (p: string) => p.startsWith("/tareas") },
@@ -68,7 +75,7 @@ const MOBILE_TABS = [
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   return (
-    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-2" aria-label="Módulos NaraGest">
+    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-2" aria-label="Nara y NaraGest">
       {NAV.map((item, i) => {
         const active = item.match?.(pathname) ?? pathname === item.to;
         const Icon = item.icon;
@@ -104,20 +111,27 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   );
 }
 
+/** Logo de Nara: al pulsar entra en NaraGest (gestión de farmacia). */
 function LogoHome({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
   return (
     <Link
       to="/panel"
       onClick={onNavigate}
       className="flex min-w-0 items-center gap-2.5 transition hover:opacity-90"
-      aria-label="Ir al inicio de NaraGest"
+      aria-label="Nara · abrir NaraGest"
     >
       <NaraMark className={compact ? "size-8" : "size-9"} />
       <div className="min-w-0">
         <p className={cn("font-display font-semibold leading-none tracking-tight", compact ? "text-base text-ink" : "text-lg text-white")}>
-          NaraGest
+          Nara
         </p>
-        {!compact ? <p className="mt-1 text-[11px] font-medium text-white/50">Oficina de farmacia</p> : null}
+        {!compact ? (
+          <p className="mt-1 text-[11px] font-medium text-white/50">
+            <span className="text-white/80">NaraGest</span> · gestión de farmacia
+          </p>
+        ) : (
+          <p className="truncate text-[10px] text-muted">NaraGest</p>
+        )}
       </div>
     </Link>
   );
@@ -158,7 +172,7 @@ export function AppShell({
             <LogOut className="size-4" />
             Acceso / sesión
           </Link>
-          <p className="mt-2 px-3 text-[10px] leading-relaxed text-white/35">Conexión segura · Datos protegidos</p>
+          <p className="mt-2 px-3 text-[10px] leading-relaxed text-white/35">Nara · Conexión segura</p>
         </div>
       </aside>
 
