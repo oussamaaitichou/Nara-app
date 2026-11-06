@@ -1,14 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Download, Plus, Trash2, TrendingUp } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
-import {
-  addMarginLine,
-  loadPilot,
-  marginStats,
-  removeMarginLine,
-  type PilotMarginLine,
-} from "@/lib/naragest/pilot-store";
+import { apiCreateMargin, apiDeleteMargin, apiListMargins } from "@/lib/naragest/commerce-api";
+import { marginStats, type PilotMarginLine } from "@/lib/naragest/pilot-store";
 
 export const Route = createFileRoute("/rentabilidad")({
   component: RentabilidadPage,
@@ -21,6 +16,7 @@ function eur(n: number) {
 
 function RentabilidadPage() {
   const [rows, setRows] = useState<PilotMarginLine[]>([]);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     producto: "",
@@ -30,19 +26,21 @@ function RentabilidadPage() {
     coste: 0,
   });
 
-  function refresh() {
-    setRows(loadPilot().margins);
-  }
-  useEffect(() => {
-    refresh();
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      setRows(await apiListMargins());
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
   const enriched = useMemo(
-    () =>
-      rows.map((r) => ({
-        ...r,
-        ...marginStats(r),
-      })),
+    () => rows.map((r) => ({ ...r, ...marginStats(r) })),
     [rows],
   );
 
@@ -73,19 +71,19 @@ function RentabilidadPage() {
       .sort((a, b) => b.margen - a.margen);
   }, [enriched]);
 
-  function onAdd(e: React.FormEvent) {
+  async function onAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!form.producto.trim() || form.pvp <= 0) return;
-    addMarginLine({
-      producto: form.producto.trim(),
-      categoria: form.categoria.trim() || "Otros",
-      unidades: Math.max(1, form.unidades),
+    await apiCreateMargin({
+      productName: form.producto.trim(),
+      category: form.categoria.trim() || "Otros",
+      units: Math.max(1, form.unidades),
       pvp: form.pvp,
-      coste: Math.max(0, form.coste),
+      unitCost: Math.max(0, form.coste),
     });
     setForm({ producto: "", categoria: "OTC", unidades: 1, pvp: 0, coste: 0 });
     setOpen(false);
-    refresh();
+    await refresh();
   }
 
   function exportCsv() {
@@ -106,14 +104,16 @@ function RentabilidadPage() {
   }
 
   return (
-    <AppShell title="Rentabilidad" subtitle="Márgenes por producto y categoría · datos editables">
+    <AppShell title="Rentabilidad" subtitle="Márgenes por producto y categoría · API multi-org">
       <div className="mx-auto max-w-6xl space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="flex size-10 items-center justify-center rounded-2xl bg-blue-50 text-[#3B6EF5]">
               <TrendingUp className="size-5" />
             </span>
-            <p className="text-sm text-slate-500">{rows.length} productos en el análisis</p>
+            <p className="text-sm text-slate-500">
+              {loading ? "Cargando…" : `${rows.length} productos en el análisis`}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={exportCsv} className="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold">
@@ -126,7 +126,7 @@ function RentabilidadPage() {
         </div>
 
         {open ? (
-          <form onSubmit={onAdd} className="grid gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
+          <form onSubmit={(e) => void onAdd(e)} className="grid gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
             <h3 className="font-display text-lg font-semibold sm:col-span-2">Nueva línea de margen</h3>
             <label className="text-sm sm:col-span-2">Producto *
               <input required value={form.producto} onChange={(e) => setForm((f) => ({ ...f, producto: e.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" />
@@ -225,10 +225,7 @@ function RentabilidadPage() {
                       <td className="px-4 py-3 text-right">
                         <button
                           type="button"
-                          onClick={() => {
-                            removeMarginLine(r.id);
-                            refresh();
-                          }}
+                          onClick={() => void apiDeleteMargin(r.id).then(() => refresh())}
                           className="inline-flex items-center gap-1 text-xs font-semibold text-red-600"
                         >
                           <Trash2 className="size-3.5" /> Borrar
@@ -239,14 +236,14 @@ function RentabilidadPage() {
               </tbody>
             </table>
           </div>
-          {rows.length === 0 ? (
+          {!loading && rows.length === 0 ? (
             <p className="p-8 text-center text-sm text-slate-500">Añade productos con PVP y coste para ver márgenes.</p>
           ) : null}
         </section>
 
         <p className="text-xs text-slate-400">
           Fórmulas: margen ud. = PVP − coste · margen % = margen ud. / PVP · margen total = unidades × margen ud.
-          Los datos se guardan en este navegador (piloto). En rojo: margen < 22 % (producto) o < 25 % (categoría).
+          Si la API/BD está activa, los datos son multi-farmacia; si no, se usa respaldo local del navegador.
         </p>
       </div>
     </AppShell>
