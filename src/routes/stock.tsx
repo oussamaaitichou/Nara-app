@@ -15,7 +15,6 @@ import {
   getDemoProducts,
   parseStockCsv,
   stockKpis,
-  type StockAlert,
   type StockAlertKind,
   type StockProduct,
 } from "@/lib/naragest/stock-engine";
@@ -38,7 +37,6 @@ function StockInteligentePage() {
   const [filter, setFilter] = useState<FilterKey>("todas");
   const [importMsg, setImportMsg] = useState<string | null>(null);
 
-  // Fecha de referencia del piloto (coherente con informes compras/ventas)
   const today = useMemo(() => new Date("2026-11-06"), []);
   const alerts = useMemo(() => analyzeAll(products, today), [products, today]);
   const kpis = useMemo(() => stockKpis(alerts), [alerts]);
