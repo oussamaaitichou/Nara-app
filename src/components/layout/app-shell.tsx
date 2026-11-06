@@ -104,6 +104,25 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   );
 }
 
+function LogoHome({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
+  return (
+    <Link
+      to="/panel"
+      onClick={onNavigate}
+      className="flex min-w-0 items-center gap-2.5 transition hover:opacity-90"
+      aria-label="Ir al inicio de NaraGest"
+    >
+      <NaraMark className={compact ? "size-8" : "size-9"} />
+      <div className="min-w-0">
+        <p className={cn("font-display font-semibold leading-none tracking-tight", compact ? "text-base text-ink" : "text-lg text-white")}>
+          NaraGest
+        </p>
+        {!compact ? <p className="mt-1 text-[11px] font-medium text-white/50">Oficina de farmacia</p> : null}
+      </div>
+    </Link>
+  );
+}
+
 export function AppShell({
   children,
   title,
@@ -121,12 +140,8 @@ export function AppShell({
   return (
     <div className="flex min-h-dvh bg-[#F7F5F1] text-ink">
       <aside className="hidden w-[260px] shrink-0 flex-col bg-[#0F2E2A] text-white md:flex">
-        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
-          <NaraMark className="size-9" />
-          <div className="min-w-0">
-            <p className="font-display text-lg font-semibold leading-none tracking-tight text-white">NaraGest</p>
-            <p className="mt-1 text-[11px] font-medium text-white/50">Oficina de farmacia</p>
-          </div>
+        <div className="border-b border-white/10 px-5 py-5">
+          <LogoHome />
         </div>
 
         <NavLinks pathname={pathname} />
@@ -157,10 +172,9 @@ export function AppShell({
           >
             {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
-          <NaraMark className="size-8" />
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-base font-semibold leading-tight">NaraGest</p>
-            {title ? <p className="truncate text-xs text-muted">{title}</p> : null}
+            <LogoHome compact />
+            {title ? <p className="truncate pl-[2.6rem] text-xs text-muted">{title}</p> : null}
           </div>
           <Link
             to="/consulta"
@@ -174,13 +188,11 @@ export function AppShell({
           <div className="fixed inset-0 z-40 md:hidden">
             <button type="button" className="absolute inset-0 bg-ink/40" aria-label="Cerrar" onClick={() => setMenuOpen(false)} />
             <div className="absolute inset-y-0 left-0 flex w-[min(100%,290px)] flex-col bg-[#0F2E2A] text-white shadow-[var(--shadow-lift)]">
-              <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-4">
-                <NaraMark className="size-9" />
+              <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
                 <div className="min-w-0 flex-1">
-                  <p className="font-display text-lg font-semibold">NaraGest</p>
-                  <p className="text-[11px] text-white/50">Oficina de farmacia</p>
+                  <LogoHome onNavigate={() => setMenuOpen(false)} />
                 </div>
-                <button type="button" className="size-9 rounded-lg border border-white/15" onClick={() => setMenuOpen(false)} aria-label="Cerrar">
+                <button type="button" className="size-9 shrink-0 rounded-lg border border-white/15" onClick={() => setMenuOpen(false)} aria-label="Cerrar">
                   <X className="mx-auto size-4" />
                 </button>
               </div>
