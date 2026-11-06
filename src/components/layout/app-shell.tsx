@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ClipboardList,
   FileText,
+  FolderOpen,
   KeyRound,
   LayoutDashboard,
   LogOut,
@@ -52,7 +53,8 @@ const NAV: ShellItem[] = [
   { to: "/ventas", label: "Ventas y ticket", icon: Wallet, match: (p) => p.startsWith("/ventas") },
   { to: "/caducidades", label: "Caducidades", icon: AlertTriangle, match: (p) => p.startsWith("/caducidades"), badge: 12 },
   { to: "/caja", label: "Caja y tesorería", icon: BarChart3, match: (p) => p.startsWith("/caja") },
-  { to: "/clientes-f", label: "Clientes", icon: Users, match: (p) => p.startsWith("/clientes-f"), section: "Equipo" },
+  { to: "/clientes-f", label: "Clientes", icon: Users, match: (p) => p.startsWith("/clientes-f"), section: "Personas" },
+  { to: "/expedientes", label: "Expedientes", icon: FolderOpen, match: (p) => p.startsWith("/expedientes") },
   { to: "/equipo", label: "Equipo y turnos", icon: UserCircle2, match: (p) => p.startsWith("/equipo") },
   { to: "/tareas", label: "Tareas", icon: ClipboardList, match: (p) => p.startsWith("/tareas"), badge: 5 },
   { to: "/servicios-f", label: "Servicios", icon: Thermometer, match: (p) => p.startsWith("/servicios-f"), section: "Cumplimiento" },
@@ -68,8 +70,8 @@ const NAV: ShellItem[] = [
 const MOBILE_TABS = [
   { to: "/panel", label: "Gest", icon: LayoutDashboard, match: (p: string) => p === "/panel" },
   { to: "/consulta", label: "Nara", icon: MessageSquare, match: (p: string) => p.startsWith("/consulta") },
-  { to: "/stock", label: "Stock", icon: Package, match: (p: string) => p.startsWith("/stock") },
-  { to: "/tareas", label: "Tareas", icon: ClipboardList, match: (p: string) => p.startsWith("/tareas") },
+  { to: "/clientes-f", label: "Clientes", icon: Users, match: (p: string) => p.startsWith("/clientes-f") },
+  { to: "/expedientes", label: "Exp.", icon: FolderOpen, match: (p: string) => p.startsWith("/expedientes") },
 ];
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
@@ -156,7 +158,6 @@ export function AppShell({
 
   return (
     <div className="flex min-h-dvh bg-[#EEF1F7] text-slate-800">
-      {/* Sidebar navy tipo PharmaAI / SaaS */}
       <aside className="hidden w-[260px] shrink-0 flex-col bg-[#152238] text-white md:flex">
         <div className="border-b border-white/10 px-5 py-5">
           <LogoHome />
@@ -232,7 +233,7 @@ export function AppShell({
               {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
             </div>
             <div className="flex items-center gap-2">
-              <button type="button" className="inline-flex size-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500" aria-label="Notificaciones">
+              <button type="button" className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-white text-slate-500" aria-label="Notificaciones">
                 <Bell className="size-4" />
               </button>
               <Link
