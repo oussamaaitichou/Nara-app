@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Download, Plus, Trash2, Wallet } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
-import { addSale, loadPilot, removeSale, type PilotSale } from "@/lib/naragest/pilot-store";
+import { apiCreateSale, apiDeleteSale, apiListSales } from "@/lib/naragest/commerce-api";
+import type { PilotSale } from "@/lib/naragest/pilot-store";
 
 export const Route = createFileRoute("/ventas")({
   component: VentasPage,
@@ -17,6 +18,7 @@ function eur(n: number) {
 
 function VentasPage() {
   const [rows, setRows] = useState<PilotSale[]>([]);
+  const [loading, setLoading] = useState(true);
   const [periodo, setPeriodo] = useState<Periodo>("todo");
   const [soloDev, setSoloDev] = useState(false);
   const [open, setOpen] = useState(false);
@@ -31,12 +33,18 @@ function VentasPage() {
     categoria: "OTC",
   });
 
-  function refresh() {
-    setRows(loadPilot().sales);
-  }
-  useEffect(() => {
-    refresh();
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      setRows(await apiListSales());
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const filtrados = useMemo(() => {
     const now = new Date();
@@ -67,21 +75,21 @@ function VentasPage() {
     };
   }, [filtrados]);
 
-  function onAdd(e: React.FormEvent) {
+  async function onAdd(e: React.FormEvent) {
     e.preventDefault();
     if (form.importe === 0) return;
-    addSale({
-      fecha: form.fecha,
-      hora: form.hora,
-      importe: form.importe,
-      pago: form.pago,
-      lineas: Math.max(1, form.lineas),
-      tipo: form.tipo,
-      categoria: form.categoria.trim() || "Otros",
+    await apiCreateSale({
+      saleDate: form.fecha,
+      saleTime: form.hora,
+      amount: form.importe,
+      payment: form.pago,
+      linesCount: Math.max(1, form.lineas),
+      kind: form.tipo,
+      category: form.categoria.trim() || "Otros",
     });
     setOpen(false);
     setForm((f) => ({ ...f, importe: 0, lineas: 1 }));
-    refresh();
+    await refresh();
   }
 
   function exportCsv() {
@@ -99,14 +107,14 @@ function VentasPage() {
   }
 
   return (
-    <AppShell title="Ventas" subtitle="Tickets reales del piloto · se guardan en este navegador">
+    <AppShell title="Ventas" subtitle="Tickets multi-farmacia · API + respaldo local">
       <div className="mx-auto max-w-6xl space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="flex size-10 items-center justify-center rounded-2xl bg-blue-50 text-[#3B6EF5]">
               <Wallet className="size-5" />
             </span>
-            <p className="text-sm text-slate-500">{filtrados.length} tickets en el filtro</p>
+            <p className="text-sm text-slate-500">{loading ? "Cargando…" : `${filtrados.length} tickets`}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={exportCsv} className="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold">
@@ -119,7 +127,7 @@ function VentasPage() {
         </div>
 
         {open ? (
-          <form onSubmit={onAdd} className="grid gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
+          <form onSubmit={(e) => void onAdd(e)} className="grid gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
             <h3 className="font-display text-lg font-semibold sm:col-span-2">Alta de ticket</h3>
             <label className="text-sm">Fecha
               <input type="date" value={form.fecha} onChange={(e) => setForm((f) => ({ ...f, fecha: e.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" />
@@ -197,7 +205,7 @@ function VentasPage() {
                     <td className="px-4 py-3">{t.categoria}</td>
                     <td className="px-4 py-3">{t.tipo === "devolucion" ? "Devolución" : "Venta"}</td>
                     <td className="px-4 py-3 text-right">
-                      <button type="button" onClick={() => { removeSale(t.id); refresh(); }} className="inline-flex items-center gap-1 text-xs font-semibold text-red-600">
+                      <button type="button" onClick={() => void apiDeleteSale(t.id).then(() => refresh())} className="inline-flex items-center gap-1 text-xs font-semibold text-red-600">
                         <Trash2 className="size-3.5" /> Borrar
                       </button>
                     </td>
@@ -206,7 +214,7 @@ function VentasPage() {
               </tbody>
             </table>
           </div>
-          {filtrados.length === 0 ? <p className="p-8 text-center text-sm text-slate-500">No hay tickets. Crea uno con «Nuevo ticket».</p> : null}
+          {!loading && filtrados.length === 0 ? <p className="p-8 text-center text-sm text-slate-500">No hay tickets. Crea uno con «Nuevo ticket».</p> : null}
         </div>
       </div>
     </AppShell>
