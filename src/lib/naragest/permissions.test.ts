@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { canDelete, canExport, canWrite, type NgRole } from "./access.server";
+import { canDelete, canExport, canWrite, type NgRole } from "./permissions";
 
 const roles: NgRole[] = ["admin_org", "titular", "adjunto", "tecnico", "auxiliar"];
 
