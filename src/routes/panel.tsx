@@ -16,9 +16,9 @@ import {
 import { AppShell } from "@/components/layout/app-shell";
 
 export const Route = createFileRoute("/panel")({
-  component: PanelPage,
+  component: NaraGestHome,
   head: () => ({
-    meta: [{ title: "Inicio — NaraGest" }],
+    meta: [{ title: "NaraGest — Gestión de farmacia" }],
   }),
 });
 
@@ -29,7 +29,7 @@ function saludo() {
   return "Buenas noches";
 }
 
-function PanelPage() {
+function NaraGestHome() {
   const fecha = new Date().toLocaleDateString("es-ES", {
     weekday: "long",
     day: "numeric",
@@ -37,24 +37,26 @@ function PanelPage() {
   });
 
   return (
-    <AppShell title="Inicio" subtitle="Estado de la farmacia y lo que requiere atención">
+    <AppShell title="NaraGest" subtitle="Gestión de la oficina de farmacia">
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="rounded-2xl border border-line/80 bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold tracking-wide text-teal uppercase">{fecha}</p>
               <h2 className="mt-1 font-display text-2xl font-semibold tracking-tight text-ink">
-                {saludo()}. Bienvenido a NaraGest.
+                {saludo()}. Estás en NaraGest.
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-                Aquí tienes el estado de tu oficina de farmacia y las tareas que requieren tu atención.
+                <strong className="font-medium text-ink">Nara</strong> es el producto completo (asesora + gestión).
+                <strong className="font-medium text-ink"> NaraGest</strong> es el módulo que gestiona la farmacia:
+                stock, equipo, caja, caducidades y el día a día del turno.
               </p>
             </div>
             <Link
               to="/consulta"
               className="inline-flex h-10 items-center gap-2 rounded-full bg-teal px-4 text-sm font-semibold text-primary-foreground"
             >
-              <Sparkles className="size-4" /> Asistente IA
+              <Sparkles className="size-4" /> Preguntar a Nara
             </Link>
           </div>
         </section>
@@ -65,7 +67,7 @@ function PanelPage() {
           <MetricCard label="Stock bajo" value="8" hint="Bajo mínimo" icon={Package} tone="sky" to="/stock" />
           <MetricCard label="Caducidades" value="12" hint="Próximos 90 días" icon={AlertTriangle} tone="sand" to="/caducidades" />
           <MetricCard label="Tareas pendientes" value="5" hint="Turno actual" icon={ClipboardList} tone="lavender" to="/tareas" />
-          <MetricCard label="Equipo en turno" value="—" hint="NaraGest" icon={Users} tone="mint" to="/equipo" />
+          <MetricCard label="Equipo en turno" value="—" hint="Plantilla" icon={Users} tone="mint" to="/equipo" />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
@@ -121,7 +123,7 @@ function PanelPage() {
 
         <div className="grid gap-4 lg:grid-cols-2">
           <section className="rounded-2xl border border-teal-soft bg-gradient-to-br from-teal-mist to-white p-5 sm:p-6">
-            <p className="text-xs font-semibold tracking-wide text-teal uppercase">Nara IA</p>
+            <p className="text-xs font-semibold tracking-wide text-teal uppercase">Nara · asesora</p>
             <h3 className="mt-1 font-display text-xl font-semibold text-teal-deep">Recomendaciones</h3>
             <ul className="mt-4 space-y-3 text-sm text-ink-soft">
               <li className="flex gap-2">
@@ -139,7 +141,7 @@ function PanelPage() {
             </ul>
             <div className="mt-4 flex flex-wrap gap-2">
               <Link to="/caducidades" className="inline-flex items-center gap-1 rounded-full bg-teal px-3 py-1.5 text-xs font-semibold text-primary-foreground">
-                Ver caducidades <ArrowRight className="size-3.5" />
+                Ver en NaraGest <ArrowRight className="size-3.5" />
               </Link>
               <Link to="/consulta" className="inline-flex items-center gap-1 rounded-full border border-teal/30 bg-white px-3 py-1.5 text-xs font-semibold text-teal">
                 Preguntar a Nara
@@ -148,12 +150,12 @@ function PanelPage() {
           </section>
 
           <section className="rounded-2xl border border-line/80 bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
-            <h3 className="font-display text-lg font-semibold text-ink">Accesos rápidos</h3>
+            <h3 className="font-display text-lg font-semibold text-ink">Accesos rápidos · NaraGest</h3>
             <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <ActionTile icon={MessageSquare} label="Nueva consulta" to="/consulta" />
+              <ActionTile icon={MessageSquare} label="Consultar a Nara" to="/consulta" />
               <ActionTile icon={Package} label="Stock" to="/stock" />
               <ActionTile icon={Wallet} label="Ventas" to="/ventas" />
-              <ActionTile icon={Bell} label="Alertas" to="/caducidades" />
+              <ActionTile icon={Bell} label="Caducidades" to="/caducidades" />
             </div>
           </section>
         </div>
