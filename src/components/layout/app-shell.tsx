@@ -37,7 +37,6 @@ export type ShellItem = {
   badge?: number;
 };
 
-/** Nara = producto completo. NaraGest = gestión de la farmacia. */
 const NAV: ShellItem[] = [
   { to: "/consulta", label: "Consultar a Nara", icon: MessageSquare, match: (p) => p.startsWith("/consulta"), section: "Nara" },
   { to: "/valorar", label: "Valorar farmacia", icon: Star, match: (p) => p.startsWith("/valorar") },
@@ -75,14 +74,14 @@ const MOBILE_TABS = [
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   return (
-    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-2" aria-label="Nara y NaraGest">
+    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-3" aria-label="Nara y NaraGest">
       {NAV.map((item, i) => {
         const active = item.match?.(pathname) ?? pathname === item.to;
         const Icon = item.icon;
         return (
           <div key={`${item.label}-${i}`}>
             {item.section ? (
-              <p className="mb-1.5 mt-5 px-3 text-[10px] font-semibold tracking-[0.14em] text-white/40 uppercase">
+              <p className="mb-1.5 mt-4 px-3 text-[10px] font-semibold tracking-[0.12em] text-slate-400 uppercase">
                 {item.section}
               </p>
             ) : null}
@@ -90,16 +89,21 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
               to={item.to}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
                 active
-                  ? "bg-white/12 text-white shadow-sm ring-1 ring-white/10"
-                  : "text-white/65 hover:bg-white/8 hover:text-white",
+                  ? "bg-[#3B6EF5] text-white shadow-md shadow-blue-900/25"
+                  : "text-slate-300 hover:bg-white/8 hover:text-white",
               )}
             >
-              <Icon className="size-4 shrink-0 opacity-90" strokeWidth={active ? 2.25 : 1.75} />
+              <Icon className="size-4 shrink-0 opacity-95" strokeWidth={active ? 2.25 : 1.75} />
               <span className="min-w-0 flex-1 truncate">{item.label}</span>
               {item.badge ? (
-                <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] font-semibold text-white/90">
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                    active ? "bg-white/20 text-white" : "bg-white/10 text-slate-200",
+                  )}
+                >
                   {item.badge}
                 </span>
               ) : null}
@@ -111,7 +115,6 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   );
 }
 
-/** Logo de Nara: al pulsar entra en NaraGest (gestión de farmacia). */
 function LogoHome({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
   return (
     <Link
@@ -122,15 +125,15 @@ function LogoHome({ onNavigate, compact = false }: { onNavigate?: () => void; co
     >
       <NaraMark className={compact ? "size-8" : "size-9"} />
       <div className="min-w-0">
-        <p className={cn("font-display font-semibold leading-none tracking-tight", compact ? "text-base text-ink" : "text-lg text-white")}>
+        <p className={cn("font-display font-semibold leading-none tracking-tight", compact ? "text-base text-slate-800" : "text-lg text-white")}>
           Nara
         </p>
         {!compact ? (
-          <p className="mt-1 text-[11px] font-medium text-white/50">
-            <span className="text-white/80">NaraGest</span> · gestión de farmacia
+          <p className="mt-1 text-[11px] font-medium text-slate-400">
+            <span className="text-slate-200">NaraGest</span> · gestión de farmacia
           </p>
         ) : (
-          <p className="truncate text-[10px] text-muted">NaraGest</p>
+          <p className="truncate text-[10px] text-slate-500">NaraGest</p>
         )}
       </div>
     </Link>
@@ -152,8 +155,9 @@ export function AppShell({
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="flex min-h-dvh bg-[#F7F5F1] text-ink">
-      <aside className="hidden w-[260px] shrink-0 flex-col bg-[#0F2E2A] text-white md:flex">
+    <div className="flex min-h-dvh bg-[#EEF1F7] text-slate-800">
+      {/* Sidebar navy tipo PharmaAI / SaaS */}
+      <aside className="hidden w-[260px] shrink-0 flex-col bg-[#152238] text-white md:flex">
         <div className="border-b border-white/10 px-5 py-5">
           <LogoHome />
         </div>
@@ -161,38 +165,38 @@ export function AppShell({
         <NavLinks pathname={pathname} />
 
         <div className="mt-auto border-t border-white/10 p-3">
-          <div className="mb-2 rounded-xl bg-white/6 px-3 py-3">
-            <p className="text-[11px] font-medium text-white/50">Turno actual</p>
-            <p className="mt-0.5 text-sm font-medium text-white/90">Abierto</p>
+          <div className="mb-2 rounded-2xl bg-white/6 px-3 py-3">
+            <p className="text-[11px] font-medium text-slate-400">Turno actual</p>
+            <p className="mt-0.5 text-sm font-medium text-white">Abierto</p>
           </div>
           <Link
             to="/login"
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 transition hover:bg-white/8 hover:text-white"
+            className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-white/8 hover:text-white"
           >
             <LogOut className="size-4" />
             Acceso / sesión
           </Link>
-          <p className="mt-2 px-3 text-[10px] leading-relaxed text-white/35">Nara · Conexión segura</p>
+          <p className="mt-2 px-3 text-[10px] leading-relaxed text-slate-500">Nara · Conexión segura</p>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col pb-[4.25rem] md:pb-0">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-white/95 px-3 py-3 backdrop-blur-md md:hidden">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-3 py-3 backdrop-blur-md md:hidden">
           <button
             type="button"
             aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
-            className="inline-flex size-10 items-center justify-center rounded-xl border border-line bg-[#F7F5F1] text-ink"
+            className="inline-flex size-10 items-center justify-center rounded-2xl border border-slate-200 bg-[#EEF1F7] text-slate-700"
             onClick={() => setMenuOpen((v) => !v)}
           >
             {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
           <div className="min-w-0 flex-1">
             <LogoHome compact />
-            {title ? <p className="truncate pl-[2.6rem] text-xs text-muted">{title}</p> : null}
+            {title ? <p className="truncate pl-[2.6rem] text-xs text-slate-500">{title}</p> : null}
           </div>
           <Link
             to="/consulta"
-            className="inline-flex h-9 shrink-0 items-center rounded-full bg-teal px-3 text-xs font-semibold text-primary-foreground"
+            className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#3B6EF5] px-3 text-xs font-semibold text-white"
           >
             Nara
           </Link>
@@ -200,19 +204,19 @@ export function AppShell({
 
         {menuOpen ? (
           <div className="fixed inset-0 z-40 md:hidden">
-            <button type="button" className="absolute inset-0 bg-ink/40" aria-label="Cerrar" onClick={() => setMenuOpen(false)} />
-            <div className="absolute inset-y-0 left-0 flex w-[min(100%,290px)] flex-col bg-[#0F2E2A] text-white shadow-[var(--shadow-lift)]">
+            <button type="button" className="absolute inset-0 bg-slate-900/40" aria-label="Cerrar" onClick={() => setMenuOpen(false)} />
+            <div className="absolute inset-y-0 left-0 flex w-[min(100%,290px)] flex-col bg-[#152238] text-white shadow-2xl">
               <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
                 <div className="min-w-0 flex-1">
                   <LogoHome onNavigate={() => setMenuOpen(false)} />
                 </div>
-                <button type="button" className="size-9 shrink-0 rounded-lg border border-white/15" onClick={() => setMenuOpen(false)} aria-label="Cerrar">
+                <button type="button" className="size-9 shrink-0 rounded-xl border border-white/15" onClick={() => setMenuOpen(false)} aria-label="Cerrar">
                   <X className="mx-auto size-4" />
                 </button>
               </div>
               <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
               <div className="mt-auto border-t border-white/10 p-3">
-                <Link to="/login" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60">
+                <Link to="/login" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-slate-400">
                   <LogOut className="size-4" />
                   Acceso / sesión
                 </Link>
@@ -222,18 +226,18 @@ export function AppShell({
         ) : null}
 
         {(title || subtitle) && !fullBleed ? (
-          <div className="hidden items-start justify-between gap-4 border-b border-line/80 bg-white/70 px-8 py-5 backdrop-blur-sm md:flex">
+          <div className="hidden items-start justify-between gap-4 border-b border-slate-200/70 bg-white/80 px-8 py-5 backdrop-blur-sm md:flex">
             <div>
-              {title ? <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{title}</h1> : null}
-              {subtitle ? <p className="mt-1 text-sm text-muted">{subtitle}</p> : null}
+              {title ? <h1 className="font-display text-2xl font-semibold tracking-tight text-slate-900">{title}</h1> : null}
+              {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
             </div>
             <div className="flex items-center gap-2">
-              <button type="button" className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-white text-muted" aria-label="Notificaciones">
+              <button type="button" className="inline-flex size-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500" aria-label="Notificaciones">
                 <Bell className="size-4" />
               </button>
               <Link
                 to="/consulta"
-                className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-teal px-4 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-95"
+                className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#3B6EF5] px-4 text-sm font-semibold text-white shadow-sm shadow-blue-500/20 transition hover:bg-[#2F5DE0]"
               >
                 <Sparkles className="size-4" />
                 Preguntar a Nara
@@ -245,7 +249,7 @@ export function AppShell({
         <div className={cn("flex-1", fullBleed ? "min-h-0" : "px-4 py-5 sm:px-8 sm:py-6")}>{children}</div>
 
         <nav
-          className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-white/95 backdrop-blur-md md:hidden"
+          className="fixed inset-x-0 bottom-0 z-30 flex border-t border-slate-200 bg-white/95 backdrop-blur-md md:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
           aria-label="Principal"
         >
@@ -258,7 +262,7 @@ export function AppShell({
                 to={tab.to}
                 className={cn(
                   "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium",
-                  active ? "text-teal" : "text-muted",
+                  active ? "text-[#3B6EF5]" : "text-slate-400",
                 )}
               >
                 <Icon className="size-5" strokeWidth={active ? 2.25 : 1.75} />
