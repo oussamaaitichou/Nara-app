@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: nara-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nara
+      POSTGRES_PASSWORD: nara_dev_change_me
+      POSTGRES_DB: naragest
+    ports:
+      - "5432:5432"
+    volumes:
+      - nara_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nara -d naragest"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  nara_pg_data:
