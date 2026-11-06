@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ConsultaRouteImport } from './routes/consulta'
 import { Route as ErpRouteImport } from './routes/erp'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as PanelRouteImport } from './routes/panel'
 import { Route as ValorarRouteImport } from './routes/valorar'
 import { Route as ApiAccesoRouteImport } from './routes/api/acceso'
 import { Route as ApiAdminRouteImport } from './routes/api/admin'
@@ -41,6 +43,16 @@ const ConsultaRoute = ConsultaRouteImport.update({
 const ErpRoute = ErpRouteImport.update({
   id: '/erp',
   path: '/erp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PanelRoute = PanelRouteImport.update({
+  id: '/panel',
+  path: '/panel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ValorarRoute = ValorarRouteImport.update({
@@ -94,6 +106,8 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/consulta': typeof ConsultaRoute
   '/erp': typeof ErpRoute
+  '/login': typeof LoginRoute
+  '/panel': typeof PanelRoute
   '/valorar': typeof ValorarRoute
   '/api/acceso': typeof ApiAccesoRoute
   '/api/admin': typeof ApiAdminRoute
@@ -109,6 +123,8 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/consulta': typeof ConsultaRoute
   '/erp': typeof ErpRoute
+  '/login': typeof LoginRoute
+  '/panel': typeof PanelRoute
   '/valorar': typeof ValorarRoute
   '/api/acceso': typeof ApiAccesoRoute
   '/api/admin': typeof ApiAdminRoute
@@ -125,6 +141,8 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/consulta': typeof ConsultaRoute
   '/erp': typeof ErpRoute
+  '/login': typeof LoginRoute
+  '/panel': typeof PanelRoute
   '/valorar': typeof ValorarRoute
   '/api/acceso': typeof ApiAccesoRoute
   '/api/admin': typeof ApiAdminRoute
@@ -142,6 +160,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/consulta'
     | '/erp'
+    | '/login'
+    | '/panel'
     | '/valorar'
     | '/api/acceso'
     | '/api/admin'
@@ -157,6 +177,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/consulta'
     | '/erp'
+    | '/login'
+    | '/panel'
     | '/valorar'
     | '/api/acceso'
     | '/api/admin'
@@ -172,6 +194,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/consulta'
     | '/erp'
+    | '/login'
+    | '/panel'
     | '/valorar'
     | '/api/acceso'
     | '/api/admin'
@@ -188,6 +212,8 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   ConsultaRoute: typeof ConsultaRoute
   ErpRoute: typeof ErpRoute
+  LoginRoute: typeof LoginRoute
+  PanelRoute: typeof PanelRoute
   ValorarRoute: typeof ValorarRoute
   ApiAccesoRoute: typeof ApiAccesoRoute
   ApiAdminRoute: typeof ApiAdminRoute
@@ -227,6 +253,20 @@ declare module '@tanstack/react-router' {
       path: '/erp'
       fullPath: '/erp'
       preLoaderRoute: typeof ErpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/panel': {
+      id: '/panel'
+      path: '/panel'
+      fullPath: '/panel'
+      preLoaderRoute: typeof PanelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/valorar': {
@@ -300,6 +340,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   ConsultaRoute: ConsultaRoute,
   ErpRoute: ErpRoute,
+  LoginRoute: LoginRoute,
+  PanelRoute: PanelRoute,
   ValorarRoute: ValorarRoute,
   ApiAccesoRoute: ApiAccesoRoute,
   ApiAdminRoute: ApiAdminRoute,
