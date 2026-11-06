@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  canDelete,
+  canExport,
+  canWrite,
+  resolveNgAccess,
+} from "@/lib/naragest/access.server";
+import {
   createClient,
   exportClientsCsv,
   listClients,
@@ -8,28 +14,21 @@ import {
 } from "@/lib/naragest/repo.server";
 import { createClientSchema, updateClientSchema } from "@/lib/naragest/schema";
 
-/**
- * TODO de producción: resolver organizationId y actor desde sesión Better Auth
- * + ng_memberships. Mientras tanto se usa cabecera de desarrollo controlada.
- */
-function ctx(request: Request) {
-  const organizationId = request.headers.get("x-ng-org-id")?.trim();
-  const actorUserId = request.headers.get("x-ng-user-id")?.trim() ?? null;
-  if (!organizationId) {
-    return { error: Response.json({ error: "Falta organización (x-ng-org-id)." }, { status: 401 }) };
-  }
-  return { organizationId, actorUserId };
-}
-
 export const Route = createFileRoute("/api/naragest/clientes")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const c = ctx(request);
-        if ("error" in c) return c.error;
+        const resolved = await resolveNgAccess(request);
+        if (!resolved.ok) {
+          return Response.json({ error: resolved.error }, { status: resolved.status });
+        }
+        const { access } = resolved;
         const url = new URL(request.url);
         if (url.searchParams.get("export") === "csv") {
-          const csv = await exportClientsCsv(c.organizationId, c.actorUserId);
+          if (!canExport(access.roleId)) {
+            return Response.json({ error: "Sin permiso de exportación" }, { status: 403 });
+          }
+          const csv = await exportClientsCsv(access.organizationId, access.userId);
           return new Response(csv, {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
@@ -37,13 +36,28 @@ export const Route = createFileRoute("/api/naragest/clientes")({
             },
           });
         }
-        const rows = await listClients(c.organizationId);
-        return Response.json({ data: rows });
+        const rows = await listClients(access.organizationId);
+        return Response.json({
+          data: rows,
+          meta: {
+            organizationId: access.organizationId,
+            orgName: access.orgName,
+            roleId: access.roleId,
+            canWrite: canWrite(access.roleId),
+            canDelete: canDelete(access.roleId),
+            canExport: canExport(access.roleId),
+          },
+        });
       },
 
       POST: async ({ request }) => {
-        const c = ctx(request);
-        if ("error" in c) return c.error;
+        const resolved = await resolveNgAccess(request);
+        if (!resolved.ok) {
+          return Response.json({ error: resolved.error }, { status: resolved.status });
+        }
+        if (!canWrite(resolved.access.roleId)) {
+          return Response.json({ error: "Sin permiso de escritura" }, { status: 403 });
+        }
         let body: unknown;
         try {
           body = await request.json();
@@ -54,13 +68,22 @@ export const Route = createFileRoute("/api/naragest/clientes")({
         if (!parsed.success) {
           return Response.json({ error: "Validación", details: parsed.error.flatten() }, { status: 422 });
         }
-        const row = await createClient(c.organizationId, c.actorUserId, parsed.data);
+        const row = await createClient(
+          resolved.access.organizationId,
+          resolved.access.userId,
+          parsed.data,
+        );
         return Response.json({ data: row }, { status: 201 });
       },
 
       PATCH: async ({ request }) => {
-        const c = ctx(request);
-        if ("error" in c) return c.error;
+        const resolved = await resolveNgAccess(request);
+        if (!resolved.ok) {
+          return Response.json({ error: resolved.error }, { status: resolved.status });
+        }
+        if (!canWrite(resolved.access.roleId)) {
+          return Response.json({ error: "Sin permiso de escritura" }, { status: 403 });
+        }
         let body: unknown;
         try {
           body = await request.json();
@@ -73,17 +96,31 @@ export const Route = createFileRoute("/api/naragest/clientes")({
         if (!parsed.success) {
           return Response.json({ error: "Validación", details: parsed.error.flatten() }, { status: 422 });
         }
-        const row = await updateClient(c.organizationId, c.actorUserId, id, parsed.data);
+        const row = await updateClient(
+          resolved.access.organizationId,
+          resolved.access.userId,
+          id,
+          parsed.data,
+        );
         if (!row) return Response.json({ error: "No encontrado" }, { status: 404 });
         return Response.json({ data: row });
       },
 
       DELETE: async ({ request }) => {
-        const c = ctx(request);
-        if ("error" in c) return c.error;
+        const resolved = await resolveNgAccess(request);
+        if (!resolved.ok) {
+          return Response.json({ error: resolved.error }, { status: resolved.status });
+        }
+        if (!canDelete(resolved.access.roleId)) {
+          return Response.json({ error: "Sin permiso de borrado" }, { status: 403 });
+        }
         const id = new URL(request.url).searchParams.get("id");
         if (!id) return Response.json({ error: "Falta id" }, { status: 400 });
-        const ok = await softDeleteClient(c.organizationId, c.actorUserId, id);
+        const ok = await softDeleteClient(
+          resolved.access.organizationId,
+          resolved.access.userId,
+          id,
+        );
         if (!ok) return Response.json({ error: "No encontrado" }, { status: 404 });
         return Response.json({ ok: true });
       },
