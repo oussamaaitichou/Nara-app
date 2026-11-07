@@ -12,6 +12,7 @@ import { formatNaragestContext } from "@/lib/naragest/chat-context";
 const MAX_MESSAGES = 40;
 const MAX_TOTAL_CHARS = 28000;
 const MAX_CHARS = 4000;
+const MAX_SNAPSHOT = 12000;
 
 type Incoming = { role: "user" | "assistant"; content: string };
 
@@ -19,11 +20,10 @@ function fail(message: string, status: number) {
   return Response.json({ error: message }, { status });
 }
 
-/** Preguntas de negocio de la farmacia → inyectar KPIs e insights NaraGest. */
 function quiereDatosNegocio(query: string): boolean {
   const q = query.toLowerCase();
   return /(
-    farmacia|negocio|ventas|compra|stock|inventario|margen|rentabil|\n    caduc|pedido|proveedor|c[oó]mo va|c[oó]mo est[aá]|perd|\n    beneficio|factur|kpi|dashboard|panel|nara\s*gest|alert
+    farmacia|negocio|ventas|compra|stock|inventario|margen|rentabil|\n    caduc|pedido|proveedor|c[oó]mo va|c[oó]mo est[aá]|perd|\n    beneficio|factur|kpi|dashboard|panel|nara\s*gest|alert|prioriz
   )/i.test(q);
 }
 
@@ -56,6 +56,10 @@ export const Route = createFileRoute("/api/chat")({
 
         const messages = body.messages as Incoming[] | undefined;
         const hayAdjuntos = Array.isArray(body.adjuntos) && body.adjuntos.length > 0;
+        const clientSnapshot =
+          typeof body.naragestSnapshot === "string"
+            ? body.naragestSnapshot.trim().slice(0, MAX_SNAPSHOT)
+            : "";
 
         if ((!Array.isArray(messages) || messages.length === 0) && !hayAdjuntos) {
           return fail("Escribe una consulta o adjunta un archivo.", 400);
@@ -102,9 +106,9 @@ export const Route = createFileRoute("/api/chat")({
         const clasificacion = clasificar(query || "documento");
 
         let contexto = formatContext(found);
-        if (quiereDatosNegocio(query)) {
+        if (quiereDatosNegocio(query) || clientSnapshot) {
           try {
-            const ng = formatNaragestContext(new Date());
+            const ng = clientSnapshot || formatNaragestContext(new Date());
             contexto = [contexto, ng].filter(Boolean).join("\n\n");
           } catch (e) {
             console.error("[chat] NaraGest context", e);
@@ -127,7 +131,8 @@ export const Route = createFileRoute("/api/chat")({
             docs: found.map((c) => c.id),
             acceso: codigoId,
             adjuntos: items.length,
-            naragest: quiereDatosNegocio(query),
+            naragest: !!(clientSnapshot || quiereDatosNegocio(query)),
+            snapshotClient: !!clientSnapshot,
           }),
         );
         const sources = formatSources(found);
