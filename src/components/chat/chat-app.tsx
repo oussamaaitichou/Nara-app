@@ -211,7 +211,6 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
     const history = (conv?.messages ?? [])
       .filter((m) => m.id !== assistantId && m.content && !m.error)
       .map((m) => ({ role: m.role, content: m.content }));
-    // El último mensaje de usuario en historial ya incluye el label; para la API usamos el texto limpio
     if (history.length) {
       history[history.length - 1] = {
         role: "user",
@@ -258,7 +257,9 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, initialQuestion]);
 
-  if (acceso.cargando) return <div className="flex min-h-dvh items-center justify-center bg-bg" aria-busy="true" />;
+  if (acceso.cargando) {
+    return <div className="flex min-h-dvh items-center justify-center bg-[#F4F0E8]" aria-busy="true" />;
+  }
   if (acceso.requerido && !acceso.autenticado) return <AccessGate onSuccess={() => void refrescarAcceso()} />;
 
   const empty = !active || active.messages.length === 0;
@@ -267,36 +268,61 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
   const canSend = !busy && hydrated && (!!draft.trim() || pending.length > 0);
 
   return (
-    <div className="flex h-dvh min-h-0 bg-bg">
+    <div className="flex h-dvh min-h-0 bg-[#F4F0E8] text-[#1A2320]">
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between gap-3 border-b border-line bg-surface/90 px-3 sm:px-5">
-          <NaraWordmark />
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <a href="/panel">Panel</a>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <a href="/">Inicio</a>
-            </Button>
+        <header className="flex h-15 items-center justify-between gap-3 border-b border-[#D9D1C3] bg-[#FFFDF8]/95 px-3 backdrop-blur-md sm:px-5">
+          <div className="flex items-center gap-3">
+            <NaraWordmark />
+            <span className="hidden rounded-full bg-[#EEF5F1] px-2.5 py-0.5 text-[11px] font-medium text-[#1B5C4E] sm:inline">
+              Asistente
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <a
+              href="/panel"
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-[#5C6B64] transition hover:bg-[#EEF5F1] hover:text-[#1B5C4E]"
+            >
+              Panel
+            </a>
+            <a
+              href="/"
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-[#5C6B64] transition hover:bg-[#EBE4D6] hover:text-[#1A2320]"
+            >
+              Inicio
+            </a>
           </div>
         </header>
-        <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+
+        <div
+          ref={scroller}
+          className="min-h-0 flex-1 overflow-y-auto"
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 50% at 50% -10%, #EEF5F1 0%, transparent 55%), #F4F0E8",
+          }}
+        >
           {empty ? (
-            <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-10">
-              <NaraMark className="size-12" />
-              <h1 className="font-display text-3xl font-semibold text-ink">¿En qué te ayudo hoy?</h1>
-              <p className="text-muted">
-                Gestión, stock, márgenes o mostrador. Puedes adjuntar fotos, PDF, Word, Excel o CSV (clip abajo).
-                Cada consulta lleva el snapshot de NaraGest de este navegador.
-              </p>
-              <div className="grid gap-2 sm:grid-cols-2">
+            <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-12">
+              <div className="flex size-14 items-center justify-center rounded-2xl bg-[#EEF5F1] ring-1 ring-[#DCEAE4]">
+                <NaraMark className="size-9" />
+              </div>
+              <div>
+                <h1 className="font-display text-3xl font-semibold tracking-tight text-[#1A2320]">
+                  ¿En qué te ayudo hoy?
+                </h1>
+                <p className="mt-2 max-w-lg text-[15px] leading-relaxed text-[#5C6B64]">
+                  Gestión, stock, márgenes o mostrador. Puedes adjuntar fotos o documentos con el clip. Cada consulta
+                  puede usar el snapshot de NaraGest de este navegador.
+                </p>
+              </div>
+              <div className="grid gap-2.5 sm:grid-cols-2">
                 {starters.map((s) => (
                   <button
                     key={s}
                     type="button"
                     onClick={() => void send(s)}
                     disabled={busy || !hydrated}
-                    className="rounded-lg border border-line bg-surface px-4 py-3 text-left text-sm hover:border-teal"
+                    className="rounded-2xl border border-[#D9D1C3] bg-[#FFFDF8] px-4 py-3.5 text-left text-sm text-[#2C3833] shadow-[0_1px_2px_rgb(26_35_32/0.04)] transition hover:border-[#1B5C4E]/35 hover:bg-[#EEF5F1]/60 hover:text-[#123F36]"
                   >
                     {s}
                   </button>
@@ -304,36 +330,53 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
               </div>
             </div>
           ) : (
-            <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6">
+            <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
               {active.messages.map((m) => (
                 <div key={m.id} className={cn("flex gap-3", m.role === "user" ? "justify-end" : "justify-start")}>
-                  {m.role !== "user" && <NaraMark className="mt-1 size-8 shrink-0" />}
+                  {m.role !== "user" ? (
+                    <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#EEF5F1] ring-1 ring-[#DCEAE4]">
+                      <NaraMark className="size-5" />
+                    </div>
+                  ) : null}
                   <div
                     className={cn(
-                      "max-w-[min(100%,40rem)] rounded-xl px-4 py-3",
-                      m.role === "user" ? "bg-teal text-primary-foreground" : "bg-surface ring-1 ring-line",
+                      "max-w-[min(100%,40rem)] px-4 py-3 text-[15px] leading-relaxed",
+                      m.role === "user"
+                        ? "rounded-2xl rounded-br-md bg-[#1B5C4E] text-[#F4F0E8] shadow-sm"
+                        : "rounded-2xl rounded-bl-md border border-[#D9D1C3] bg-[#FFFDF8] text-[#1A2320] shadow-[0_1px_2px_rgb(26_35_32/0.04)]",
+                      m.error && m.role !== "user" ? "border-[#E8C9C4] bg-[#FBF4F2] text-[#8F2D2D]" : null,
                     )}
                   >
-                    {m.role === "user" ? <p className="whitespace-pre-wrap">{m.content}</p> : <Markdown text={m.content} />}
+                    {m.role === "user" ? (
+                      <p className="whitespace-pre-wrap">{m.content}</p>
+                    ) : (
+                      <div className="prose-chat">
+                        <Markdown text={m.content} />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
+              {busy ? (
+                <p className="pl-11 text-sm text-[#7A877F]">Nara está pensando…</p>
+              ) : null}
             </div>
           )}
         </div>
-        <div className="border-t border-line bg-surface px-3 py-3 sm:px-5">
+
+        <div className="border-t border-[#D9D1C3] bg-[#FFFDF8]/95 px-3 py-3 backdrop-blur-md sm:px-5">
           {pending.length > 0 ? (
-            <div className="mx-auto mb-2 flex max-w-3xl flex-wrap gap-2">
+            <div className="mx-auto mb-2.5 flex max-w-3xl flex-wrap gap-2">
               {pending.map((f) => (
                 <span
                   key={f.id}
-                  className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-line bg-bg px-2.5 py-1 text-xs text-ink"
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[#DCEAE4] bg-[#EEF5F1] px-2.5 py-1 text-xs text-[#123F36]"
                 >
                   {f.esImagen ? <ImageIcon className="size-3.5 shrink-0" /> : <FileText className="size-3.5 shrink-0" />}
                   <span className="truncate">{f.nombre}</span>
                   <button
                     type="button"
-                    className="rounded-full p-0.5 text-muted hover:bg-line hover:text-ink"
+                    className="rounded-full p-0.5 text-[#5C6B64] hover:bg-[#DCEAE4] hover:text-[#1A2320]"
                     aria-label={`Quitar ${f.nombre}`}
                     onClick={() => setPending((p) => p.filter((x) => x.id !== f.id))}
                   >
@@ -344,7 +387,7 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
             </div>
           ) : null}
           <form
-            className="mx-auto flex max-w-3xl items-end gap-2"
+            className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-[#D9D1C3] bg-[#F8F3EA] p-2 shadow-[0_1px_2px_rgb(26_35_32/0.04)]"
             onSubmit={(e) => {
               e.preventDefault();
               void send(draft);
@@ -358,17 +401,16 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
               multiple
               onChange={(e) => void onPickFiles(e.target.files)}
             />
-            <Button
+            <button
               type="button"
-              size="icon"
-              variant="outline"
               disabled={busy || pending.length >= MAX_FILES}
               aria-label="Adjuntar archivo o foto"
               title="Fotos, PDF, Word, Excel, CSV o TXT (máx. 3 MB c/u)"
               onClick={() => fileRef.current?.click()}
+              className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl text-[#1B5C4E] transition hover:bg-[#EEF5F1] disabled:opacity-40"
             >
               <Paperclip className="size-5" />
-            </Button>
+            </button>
             <Textarea
               ref={textareaRef}
               value={draft}
@@ -379,21 +421,25 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
                   void send(draft);
                 }
               }}
-              placeholder="Escribe o adjunta un archivo… Enter para enviar"
+              placeholder="Escribe o adjunta un archivo…"
               rows={1}
-              className="min-h-12 max-h-40 resize-none py-3"
+              className="min-h-11 max-h-40 flex-1 resize-none border-0 bg-transparent py-2.5 text-[15px] text-[#1A2320] shadow-none focus-visible:ring-0"
               disabled={busy}
               maxLength={4000}
             />
-            <Button type="submit" size="icon" disabled={!canSend} aria-label="Enviar">
+            <button
+              type="submit"
+              disabled={!canSend}
+              aria-label="Enviar"
+              className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#1B5C4E] text-[#F4F0E8] transition hover:bg-[#123F36] disabled:opacity-40"
+            >
               <ArrowUp className="size-5" />
-            </Button>
+            </button>
           </form>
-          <p className="mx-auto mt-2 max-w-3xl text-[11px] text-muted">
-            PNG, JPG, WebP, PDF, Word, Excel, CSV o TXT · hasta {MAX_FILES} por mensaje · 3 MB por archivo. No adjuntes
-            datos de pacientes ni historias clínicas.
+          <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] text-[#7A877F]">
+            PNG, JPG, WebP, PDF, Word, Excel, CSV · máx. {MAX_FILES} archivos · 3 MB c/u · sin datos de pacientes
           </p>
-          {error ? <p className="mx-auto mt-2 max-w-3xl text-sm text-danger">{error}</p> : null}
+          {error ? <p className="mx-auto mt-2 max-w-3xl text-center text-sm text-[#8F2D2D]">{error}</p> : null}
         </div>
       </div>
     </div>
