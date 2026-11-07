@@ -4,13 +4,13 @@ import { useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
-  Bell,
   CalendarDays,
   ClipboardList,
   FileText,
   FolderOpen,
   KeyRound,
   LayoutDashboard,
+  Lightbulb,
   LogOut,
   Menu,
   MessageSquare,
@@ -36,44 +36,38 @@ export type ShellItem = {
   icon: typeof MessageSquare;
   match?: (path: string) => boolean;
   section?: string;
-  badge?: number;
 };
 
 const NAV: ShellItem[] = [
-  { to: "/consulta", label: "Consultar a Nara", icon: MessageSquare, match: (p) => p.startsWith("/consulta"), section: "Nara" },
+  { to: "/consulta", label: "Asistente Nara", icon: MessageSquare, match: (p) => p.startsWith("/consulta"), section: "Nara" },
   { to: "/valorar", label: "Valorar farmacia", icon: Star, match: (p) => p.startsWith("/valorar") },
-  {
-    to: "/panel",
-    label: "NaraGest",
-    icon: LayoutDashboard,
-    match: (p) => p === "/panel",
-    section: "NaraGest",
-  },
-  { to: "/stock", label: "Stock inteligente", icon: Package, match: (p) => p.startsWith("/stock") },
-  { to: "/compras", label: "Compras", icon: ShoppingCart, match: (p) => p.startsWith("/compras") },
+  { to: "/panel", label: "Inicio / Dashboard", icon: LayoutDashboard, match: (p) => p === "/panel", section: "NaraGest" },
+  { to: "/stock", label: "Stock e inventario", icon: Package, match: (p) => p.startsWith("/stock") },
+  { to: "/compras", label: "Compras y proveedores", icon: ShoppingCart, match: (p) => p.startsWith("/compras") },
   { to: "/ventas", label: "Ventas", icon: Wallet, match: (p) => p.startsWith("/ventas") },
-  { to: "/rentabilidad", label: "Rentabilidad", icon: TrendingUp, match: (p) => p.startsWith("/rentabilidad") },
+  { to: "/rentabilidad", label: "Ventas y rentabilidad", icon: TrendingUp, match: (p) => p.startsWith("/rentabilidad") },
+  { to: "/oportunidades", label: "Ideas y oportunidades", icon: Lightbulb, match: (p) => p.startsWith("/oportunidades") },
   { to: "/caducidades", label: "Caducidades", icon: AlertTriangle, match: (p) => p.startsWith("/caducidades") },
   { to: "/caja", label: "Caja y tesorería", icon: BarChart3, match: (p) => p.startsWith("/caja") },
-  { to: "/clientes-f", label: "Clientes", icon: Users, match: (p) => p.startsWith("/clientes-f"), section: "Personas" },
+  { to: "/clientes-f", label: "Clientes y fidelización", icon: Users, match: (p) => p.startsWith("/clientes-f"), section: "Personas" },
   { to: "/expedientes", label: "Expedientes", icon: FolderOpen, match: (p) => p.startsWith("/expedientes") },
-  { to: "/equipo", label: "Equipo y turnos", icon: UserCircle2, match: (p) => p.startsWith("/equipo") },
+  { to: "/equipo", label: "Personal y organización", icon: UserCircle2, match: (p) => p.startsWith("/equipo") },
   { to: "/tareas", label: "Tareas", icon: ClipboardList, match: (p) => p.startsWith("/tareas") },
   { to: "/servicios-f", label: "Servicios", icon: Thermometer, match: (p) => p.startsWith("/servicios-f"), section: "Cumplimiento" },
-  { to: "/documentos", label: "Documentación", icon: FileText, match: (p) => p.startsWith("/documentos") },
+  { to: "/documentos", label: "Administración / docs", icon: FileText, match: (p) => p.startsWith("/documentos") },
   { to: "/calendario", label: "Calendario", icon: CalendarDays, match: (p) => p.startsWith("/calendario") },
-  { to: "/informes", label: "Informes", icon: BarChart3, match: (p) => p.startsWith("/informes"), section: "Sistema" },
-  { to: "/automatizaciones", label: "Automatizaciones", icon: Workflow, match: (p) => p.startsWith("/automatizaciones") },
+  { to: "/informes", label: "Informes y análisis", icon: BarChart3, match: (p) => p.startsWith("/informes"), section: "Sistema" },
+  { to: "/automatizaciones", label: "Integraciones (próx.)", icon: Workflow, match: (p) => p.startsWith("/automatizaciones") },
   { to: "/login", label: "Acceso", icon: KeyRound, match: (p) => p.startsWith("/login") },
   { to: "/configuracion", label: "Configuración", icon: Settings, match: (p) => p.startsWith("/configuracion") },
   { to: "/admin", label: "Admin", icon: Settings, match: (p) => p.startsWith("/admin") },
 ];
 
 const MOBILE_TABS = [
-  { to: "/panel", label: "Gest", icon: LayoutDashboard, match: (p: string) => p === "/panel" },
+  { to: "/panel", label: "Inicio", icon: LayoutDashboard, match: (p: string) => p === "/panel" },
   { to: "/stock", label: "Stock", icon: Package, match: (p: string) => p.startsWith("/stock") },
-  { to: "/ventas", label: "Ventas", icon: Wallet, match: (p: string) => p.startsWith("/ventas") },
-  { to: "/rentabilidad", label: "Margen", icon: TrendingUp, match: (p: string) => p.startsWith("/rentabilidad") },
+  { to: "/oportunidades", label: "Ideas", icon: Lightbulb, match: (p: string) => p.startsWith("/oportunidades") },
+  { to: "/consulta", label: "Nara", icon: MessageSquare, match: (p: string) => p.startsWith("/consulta") },
 ];
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
@@ -124,7 +118,7 @@ function LogoHome({ onNavigate, compact = false }: { onNavigate?: () => void; co
         </p>
         {!compact ? (
           <p className="mt-1 text-[11px] font-medium text-slate-400">
-            <span className="text-slate-200">NaraGest</span> · gestión de farmacia
+            <span className="text-slate-200">NaraGest</span> · IA para farmacia
           </p>
         ) : (
           <p className="truncate text-[10px] text-slate-500">NaraGest</p>
