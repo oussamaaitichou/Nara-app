@@ -8,16 +8,24 @@ import { Markdown } from "@/lib/chat/markdown";
 import { TOPICS } from "@/lib/chat/knowledge";
 import { parseNaraPayload } from "@/lib/chat/parse";
 import { selectActive, useChatStore } from "@/lib/chat/store";
+import { formatNaragestContext } from "@/lib/naragest/chat-context";
 import { cn } from "@/lib/utils";
 
 async function streamNara(
   history: { role: "user" | "assistant"; content: string }[],
   onToken: (t: string) => void,
 ) {
+  let naragestSnapshot = "";
+  try {
+    naragestSnapshot = formatNaragestContext(new Date());
+  } catch {
+    naragestSnapshot = "";
+  }
+
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages: history }),
+    body: JSON.stringify({ messages: history, naragestSnapshot }),
   });
   if (!res.ok) {
     let message = "Nara no ha podido responder.";
@@ -199,7 +207,8 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
               <NaraMark className="size-12" />
               <h1 className="font-display text-3xl font-semibold text-ink">¿En qué te ayudo hoy?</h1>
               <p className="text-muted">
-                Gestión, stock, márgenes o mostrador. Si preguntas por el negocio, Nara usa el snapshot de NaraGest (piloto).
+                Gestión, stock, márgenes o mostrador. Cada consulta lleva el snapshot de NaraGest de este navegador
+                (compras, ventas, márgenes y alertas de stock).
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {starters.map((s) => (
