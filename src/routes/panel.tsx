@@ -33,6 +33,10 @@ function eur(n: number) {
   return n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
 }
 
+function consultaHref(q: string) {
+  return `/consulta?q=${encodeURIComponent(q)}`;
+}
+
 function NaraGestHome() {
   const fecha = new Date().toLocaleDateString("es-ES", {
     weekday: "long",
@@ -81,13 +85,12 @@ function NaraGestHome() {
               >
                 <Lightbulb className="size-4 text-amber-500" /> Ideas
               </Link>
-              <Link
-                to="/consulta"
-                search={{ q: "¿Cómo está funcionando mi farmacia según NaraGest?" }}
+              <a
+                href={consultaHref("¿Cómo está funcionando mi farmacia según NaraGest?")}
                 className="inline-flex h-10 items-center gap-2 rounded-full bg-[#3B6EF5] px-4 text-sm font-semibold text-white shadow-sm shadow-blue-500/20"
               >
                 <Sparkles className="size-4" /> Preguntar a Nara
-              </Link>
+              </a>
             </div>
           </div>
         </section>
@@ -115,18 +118,17 @@ function NaraGestHome() {
                   </div>
                   <div className="flex shrink-0 flex-col gap-1.5 sm:items-end">
                     <Link
-                      to={ins.href}
+                      to={ins.href as "/stock"}
                       className="inline-flex items-center gap-1 rounded-full bg-[#3B6EF5] px-3 py-1.5 text-xs font-semibold text-white"
                     >
                       {ins.cta} <ArrowRight className="size-3.5" />
                     </Link>
-                    <Link
-                      to="/consulta"
-                      search={{ q: questionForInsight(ins) }}
+                    <a
+                      href={consultaHref(questionForInsight(ins))}
                       className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-[#3B6EF5]"
                     >
                       <MessageSquare className="size-3.5" /> Preguntar a Nara
-                    </Link>
+                    </a>
                   </div>
                 </div>
               </li>
@@ -202,7 +204,7 @@ function MetricCard({
   hint: string;
   icon: typeof MessageSquare;
   tone: "peach" | "lilac" | "sky" | "mint";
-  to: string;
+  to: "/ventas" | "/compras" | "/rentabilidad" | "/stock";
 }) {
   const tones = {
     peach: "bg-[#FFF4E8] border-[#F5E0C8]",
@@ -229,7 +231,7 @@ function ActionTile({
 }: {
   icon: typeof MessageSquare;
   label: string;
-  to: string;
+  to: "/consulta" | "/stock" | "/compras" | "/ventas" | "/rentabilidad" | "/oportunidades" | "/caducidades";
 }) {
   return (
     <Link
