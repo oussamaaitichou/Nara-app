@@ -1,8 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { adminPassword, COOKIE_ADMIN, erpActivo, errorConfiguracion } from "@/lib/piloto/config.server";
 import {
-  actualizarCodigo, actualizarSolicitud, actualizarValoracion, contarNuevas, contarPendientes, crearCodigo,
-  eliminarSolicitud, eliminarValoracion, listarCodigos, listarSolicitudes, listarValoraciones, regenerarCodigo,
+  actualizarCodigo,
+  actualizarSolicitud,
+  actualizarValoracion,
+  contarNuevas,
+  contarPendientes,
+  crearCodigo,
+  eliminarSolicitud,
+  eliminarValoracion,
+  listarCodigos,
+  listarSolicitudes,
+  listarValoraciones,
+  regenerarCodigo,
 } from "@/lib/piloto/db.server";
 import { crearAsesoria, estadoAsesoria, listarAsesorias, planAsesoria, resetPasswordPlataforma } from "@/lib/erp/db.server";
 import { cookieBorrar, cookieSet, crearSesionAdmin, esAdmin, igualesSeguro, pausa } from "@/lib/piloto/sesion.server";
@@ -79,11 +89,12 @@ export const Route = createFileRoute("/api/admin")({
           if (accion === "crear") {
             const etiqueta = txt(body.etiqueta, 80);
             const limite = num(body.limite);
+            const plan = body.plan === "chat" ? "chat" : "gest";
             if (!etiqueta || limite === null || limite < 1 || limite > 1000) {
               return Response.json({ error: "Indica un nombre y un límite diario entre 1 y 1000." }, { status: 400 });
             }
-            const { id, codigo } = await crearCodigo(etiqueta, limite);
-            return Response.json({ ok: true, id, codigo });
+            const { id, codigo } = await crearCodigo(etiqueta, limite, plan);
+            return Response.json({ ok: true, id, codigo, plan });
           }
           if (accion === "crear_asesoria") {
             if (!erpActivo()) return Response.json({ error: "El ERP no está activado (ERP_ACTIVO)." }, { status: 400 });
@@ -91,7 +102,10 @@ export const Route = createFileRoute("/api/admin")({
             const email = txt(body.adminEmail, 254);
             const adminNombre = txt(body.adminNombre, 120);
             if (nombre.length < 2 || adminNombre.length < 2 || !/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/.test(email)) {
-              return Response.json({ error: "Indica el nombre de la asesoría, y nombre y correo válidos de su administrador." }, { status: 400 });
+              return Response.json(
+                { error: "Indica el nombre de la asesoría, y nombre y correo válidos de su administrador." },
+                { status: 400 },
+              );
             }
             const r = await crearAsesoria(nombre, email, adminNombre);
             return r ? Response.json({ ok: true, ...r }) : Response.json({ error: "Ya existe un usuario con ese correo." }, { status: 409 });
@@ -110,7 +124,9 @@ export const Route = createFileRoute("/api/admin")({
           }
           if (accion === "reset_admin_asesoria") {
             const pass = await resetPasswordPlataforma(id);
-            return pass ? Response.json({ ok: true, passwordTemporal: pass }) : Response.json({ error: "No existe ese usuario." }, { status: 404 });
+            return pass
+              ? Response.json({ ok: true, passwordTemporal: pass })
+              : Response.json({ error: "No existe ese usuario." }, { status: 404 });
           }
           if (accion === "regenerar") {
             const codigo = await regenerarCodigo(id);
@@ -124,6 +140,11 @@ export const Route = createFileRoute("/api/admin")({
             const limite = num(body.limite);
             if (limite === null || limite < 1 || limite > 1000) return Response.json({ error: "Límite entre 1 y 1000." }, { status: 400 });
             await actualizarCodigo(id, { limite });
+            return Response.json({ ok: true });
+          }
+          if (accion === "plan_codigo") {
+            if (body.plan !== "chat" && body.plan !== "gest") return Response.json({ error: "Plan no válido (chat o gest)." }, { status: 400 });
+            await actualizarCodigo(id, { plan: body.plan });
             return Response.json({ ok: true });
           }
           if (accion === "valoracion") {
