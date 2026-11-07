@@ -1,7 +1,7 @@
 /** Insights proactivos tipo FarmaIA a partir de stock + piloto compras/ventas/márgenes. */
 
 import { analyzeAll, getDemoProducts, stockKpis } from "./stock-engine";
-import { loadPilot, marginStats, type PilotMarginLine } from "./pilot-store";
+import { loadPilot, marginStats } from "./pilot-store";
 
 export type InsightTone = "urgente" | "atencion" | "oportunidad" | "ok";
 
@@ -35,18 +35,14 @@ export function buildDashboardInsights(today: Date = new Date()): {
 } {
   const stockAlerts = analyzeAll(getDemoProducts(), today);
   const sk = stockKpis(stockAlerts);
-  const pilot = typeof window !== "undefined" ? loadPilot() : {
-    purchases: [],
-    sales: [],
-    margins: [] as PilotMarginLine[],
-  };
+  // loadPilot: localStorage en cliente; SEED en servidor / SSR
+  const pilot = loadPilot();
 
-  // Si hay localStorage con datos, se usan; en SSR se queda en 0 hasta hidratar
   const compras = pilot.purchases.reduce((s, p) => s + p.importe, 0);
   const ventasNetas = pilot.sales.reduce((s, t) => s + t.importe, 0);
   const pedidosPendientes = pilot.purchases.filter((p) => p.estado !== "Recibido").length;
 
-  const marginLines = pilot.margins.length ? pilot.margins : [];
+  const marginLines = pilot.margins;
   let ventasM = 0;
   let costeM = 0;
   for (const line of marginLines) {
