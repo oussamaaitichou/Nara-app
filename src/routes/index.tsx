@@ -76,6 +76,9 @@ function Hero() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
+              <Link to="/solicitar">Solicitar demo</Link>
+            </Button>
+            <Button asChild size="lg" variant="ghost">
               <a href="#temas">Ver temas</a>
             </Button>
           </div>
