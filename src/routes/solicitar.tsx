@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, type FormEvent } from "react";
 import { Check } from "lucide-react";
 import { NaraMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ function SolicitarPage() {
   const [error, setError] = useState<string | null>(null);
   const [hecho, setHecho] = useState(false);
 
-  async function enviar(e: React.FormEvent) {
+  async function enviar(e: FormEvent) {
     e.preventDefault();
     if (enviando) return;
     setEnviando(true);
@@ -64,12 +64,12 @@ function SolicitarPage() {
   return (
     <div className="min-h-dvh bg-bg">
       <header className="flex h-16 items-center justify-between border-b border-line bg-surface px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2">
+        <a href="/" className="flex items-center gap-2">
           <NaraMark className="size-8" />
           <span className="font-display text-lg font-semibold text-ink">Nara</span>
-        </Link>
+        </a>
         <Button asChild variant="outline" size="sm">
-          <Link to="/login">Ya tengo acceso</Link>
+          <a href="/login">Ya tengo acceso</a>
         </Button>
       </header>
 
@@ -90,7 +90,7 @@ function SolicitarPage() {
               enviaremos un enlace para poner tu contraseña.
             </p>
             <Button asChild variant="outline">
-              <Link to="/">Volver al inicio</Link>
+              <a href="/">Volver al inicio</a>
             </Button>
           </div>
         ) : (
@@ -133,7 +133,6 @@ function SolicitarPage() {
               <span>Mensaje (opcional)</span>
               <Textarea className="min-h-20 resize-none text-sm" value={c.mensaje} onChange={(e) => setC({ ...c, mensaje: e.target.value })} maxLength={2000} rows={3} placeholder="Cuéntanos qué necesitas. Sin datos de pacientes." />
             </label>
-            {/* Honeypot */}
             <input name="web" value={c.web} onChange={(e) => setC({ ...c, web: e.target.value })} tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
             <label className="flex items-start gap-2 text-xs text-ink-soft">
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" required />
