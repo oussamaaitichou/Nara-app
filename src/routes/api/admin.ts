@@ -15,6 +15,7 @@ import {
   regenerarCodigo,
 } from "@/lib/piloto/db.server";
 import { crearAsesoria, estadoAsesoria, listarAsesorias, planAsesoria, resetPasswordPlataforma } from "@/lib/erp/db.server";
+import { normalizarPerfil, normalizarPlan } from "@/lib/piloto/planes";
 import { cookieBorrar, cookieSet, crearSesionAdmin, esAdmin, igualesSeguro, pausa } from "@/lib/piloto/sesion.server";
 
 const ESTADOS = ["pendiente", "revisada", "corregida", "descartada"];
@@ -89,12 +90,13 @@ export const Route = createFileRoute("/api/admin")({
           if (accion === "crear") {
             const etiqueta = txt(body.etiqueta, 80);
             const limite = num(body.limite);
-            const plan = body.plan === "chat" ? "chat" : "gest";
+            const plan = normalizarPlan(body.plan);
+            const perfil = normalizarPerfil(body.perfil);
             if (!etiqueta || limite === null || limite < 1 || limite > 1000) {
               return Response.json({ error: "Indica un nombre y un límite diario entre 1 y 1000." }, { status: 400 });
             }
-            const { id, codigo } = await crearCodigo(etiqueta, limite, plan);
-            return Response.json({ ok: true, id, codigo, plan });
+            const { id, codigo } = await crearCodigo(etiqueta, limite, plan, perfil);
+            return Response.json({ ok: true, id, codigo, plan, perfil });
           }
           if (accion === "crear_asesoria") {
             if (!erpActivo()) return Response.json({ error: "El ERP no está activado (ERP_ACTIVO)." }, { status: 400 });
@@ -145,6 +147,11 @@ export const Route = createFileRoute("/api/admin")({
           if (accion === "plan_codigo") {
             if (body.plan !== "chat" && body.plan !== "gest") return Response.json({ error: "Plan no válido (chat o gest)." }, { status: 400 });
             await actualizarCodigo(id, { plan: body.plan });
+            return Response.json({ ok: true });
+          }
+          if (accion === "perfil_codigo") {
+            const perfil = normalizarPerfil(body.perfil);
+            await actualizarCodigo(id, { perfil });
             return Response.json({ ok: true });
           }
           if (accion === "valoracion") {
