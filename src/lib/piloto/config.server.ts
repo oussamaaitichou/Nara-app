@@ -54,7 +54,13 @@ export function erpActivo(): boolean {
   return process.env.ERP_ACTIVO?.trim().toLowerCase() === "si";
 }
 
-/** Subida de archivos y fotos en el chat del ERP. Apagado por defecto: antes hay que contratar un motor de IA que no use los datos para entrenar. */
+/**
+ * Subida de fotos y archivos en el chat.
+ * Activado por defecto. Para desactivar: ARCHIVOS_ACTIVOS=no
+ * (Sigue sin persistir archivos: van en la petición y no se guardan en disco.)
+ */
 export function archivosActivos(): boolean {
-  return process.env.ARCHIVOS_ACTIVOS?.trim().toLowerCase() === "si";
+  const v = process.env.ARCHIVOS_ACTIVOS?.trim().toLowerCase();
+  if (!v) return true;
+  return v === "si" || v === "yes" || v === "1" || v === "true";
 }
