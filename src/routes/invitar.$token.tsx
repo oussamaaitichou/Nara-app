@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { NaraMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 
@@ -21,7 +21,7 @@ function InvitarPage() {
   const [ok, setOk] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
-  async function enviar(e: React.FormEvent) {
+  async function enviar(e: FormEvent) {
     e.preventDefault();
     setError(null);
     if (password !== password2) {
