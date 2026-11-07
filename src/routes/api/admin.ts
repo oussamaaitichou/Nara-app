@@ -15,6 +15,15 @@ import {
   regenerarCodigo,
 } from "@/lib/piloto/db.server";
 import { crearAsesoria, estadoAsesoria, listarAsesorias, planAsesoria, resetPasswordPlataforma } from "@/lib/erp/db.server";
+import {
+  ampliarSuscripcion,
+  aprobarSolicitud,
+  actualizarNaraSolicitud,
+  contarNaraPendientes,
+  listarNaraSolicitudes,
+  pausarOCortarSuscripcion,
+} from "@/lib/planes/admin.server";
+import { emailInvitacion } from "@/lib/planes/email.server";
 import { normalizarPerfil, normalizarPlan } from "@/lib/piloto/planes";
 import { cookieBorrar, cookieSet, crearSesionAdmin, esAdmin, igualesSeguro, pausa } from "@/lib/piloto/sesion.server";
 
@@ -45,15 +54,28 @@ export const Route = createFileRoute("/api/admin")({
         if (!(await esAdmin(request))) return Response.json({ necesitaLogin: true }, { status: 401 });
         try {
           const estado = new URL(request.url).searchParams.get("estado");
-          const [codigos, valoraciones, pendientes, solicitudes, nuevas, asesorias] = await Promise.all([
-            listarCodigos(),
-            listarValoraciones(estado && (ESTADOS.includes(estado) || estado === "todas") ? estado : "pendiente"),
-            contarPendientes(),
-            listarSolicitudes(),
-            contarNuevas(),
-            erpActivo() ? listarAsesorias() : Promise.resolve([]),
-          ]);
-          return Response.json({ codigos, valoraciones, pendientes, solicitudes, nuevas, asesorias, erpActivo: erpActivo() });
+          const [codigos, valoraciones, pendientes, solicitudes, nuevas, asesorias, naraSolicitudes, naraPendientes] =
+            await Promise.all([
+              listarCodigos(),
+              listarValoraciones(estado && (ESTADOS.includes(estado) || estado === "todas") ? estado : "pendiente"),
+              contarPendientes(),
+              listarSolicitudes(),
+              contarNuevas(),
+              erpActivo() ? listarAsesorias() : Promise.resolve([]),
+              listarNaraSolicitudes("pendiente"),
+              contarNaraPendientes(),
+            ]);
+          return Response.json({
+            codigos,
+            valoraciones,
+            pendientes,
+            solicitudes,
+            nuevas,
+            asesorias,
+            erpActivo: erpActivo(),
+            naraSolicitudes,
+            naraPendientes,
+          });
         } catch (error) {
           console.error("[admin] Error al leer datos", error);
           return Response.json({ error: "No se han podido leer los datos." }, { status: 503 });
@@ -112,6 +134,63 @@ export const Route = createFileRoute("/api/admin")({
             const r = await crearAsesoria(nombre, email, adminNombre);
             return r ? Response.json({ ok: true, ...r }) : Response.json({ error: "Ya existe un usuario con ese correo." }, { status: 409 });
           }
+
+          // --- Solicitudes de demo Nara (nuevas) ---
+          if (accion === "nara_aprobar") {
+            if (!erpActivo()) return Response.json({ error: "Activa ERP_ACTIVO para aprobar demos con cuenta." }, { status: 400 });
+            const sid = num(body.id);
+            const dias = num(body.dias) ?? 7;
+            const planId = txt(body.planId, 20) || "demo";
+            if (sid === null || dias < 1 || dias > 365) {
+              return Response.json({ error: "Indica la solicitud y una duración entre 1 y 365 días." }, { status: 400 });
+            }
+            const r = await aprobarSolicitud({
+              solicitudId: sid,
+              planId,
+              dias,
+              nota: txt(body.nota, 500) || null,
+            });
+            if (!r.ok) return Response.json({ error: r.error }, { status: 400 });
+            const enviado = await emailInvitacion({
+              to: r.email,
+              nombre: r.email,
+              token: r.invitacionToken,
+              planId,
+              dias,
+            });
+            return Response.json({
+              ok: true,
+              asesoriaId: r.asesoriaId,
+              usuarioId: r.usuarioId,
+              email: r.email,
+              invitacionEnviada: enviado,
+              // Solo si el correo falló: contraseña temporal de respaldo (no ideal; preferir reenviar invitación)
+              passwordTemporalFallback: enviado ? undefined : r.passwordTemporalFallback,
+              invitacionToken: enviado ? undefined : r.invitacionToken,
+            });
+          }
+          if (accion === "nara_rechazar") {
+            const sid = num(body.id);
+            if (sid === null) return Response.json({ error: "Falta el identificador." }, { status: 400 });
+            await actualizarNaraSolicitud(sid, "rechazada", txt(body.nota, 500) || null);
+            return Response.json({ ok: true });
+          }
+          if (accion === "nara_ampliar") {
+            const asesoriaId = num(body.asesoriaId);
+            const dias = num(body.dias) ?? 7;
+            if (asesoriaId === null || dias < 1) return Response.json({ error: "Datos no válidos." }, { status: 400 });
+            await ampliarSuscripcion(asesoriaId, dias);
+            return Response.json({ ok: true });
+          }
+          if (accion === "nara_pausar" || accion === "nara_cortar" || accion === "nara_reactivar") {
+            const asesoriaId = num(body.asesoriaId);
+            if (asesoriaId === null) return Response.json({ error: "Falta la asesoría." }, { status: 400 });
+            const status =
+              accion === "nara_pausar" ? "pausada" : accion === "nara_cortar" ? "cancelada" : "activa";
+            await pausarOCortarSuscripcion(asesoriaId, status);
+            return Response.json({ ok: true });
+          }
+
           const id = num(body.id);
           if (id === null) return Response.json({ error: "Falta el identificador." }, { status: 400 });
 
