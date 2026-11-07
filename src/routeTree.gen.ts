@@ -20,6 +20,7 @@ import { Route as ErpRouteImport } from './routes/erp'
 import { Route as ExpedientesRouteImport } from './routes/expedientes'
 import { Route as InformesRouteImport } from './routes/informes'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as OportunidadesRouteImport } from './routes/oportunidades'
 import { Route as PanelRouteImport } from './routes/panel'
 import { Route as RentabilidadRouteImport } from './routes/rentabilidad'
 import { Route as ServiciosFRouteImport } from './routes/servicios-f'
@@ -57,6 +58,7 @@ const ErpRoute = ErpRouteImport.update({ id: '/erp', path: '/erp', getParentRout
 const ExpedientesRoute = ExpedientesRouteImport.update({ id: '/expedientes', path: '/expedientes', getParentRoute: () => rootRouteImport } as any)
 const InformesRoute = InformesRouteImport.update({ id: '/informes', path: '/informes', getParentRoute: () => rootRouteImport } as any)
 const LoginRoute = LoginRouteImport.update({ id: '/login', path: '/login', getParentRoute: () => rootRouteImport } as any)
+const OportunidadesRoute = OportunidadesRouteImport.update({ id: '/oportunidades', path: '/oportunidades', getParentRoute: () => rootRouteImport } as any)
 const PanelRoute = PanelRouteImport.update({ id: '/panel', path: '/panel', getParentRoute: () => rootRouteImport } as any)
 const RentabilidadRoute = RentabilidadRouteImport.update({ id: '/rentabilidad', path: '/rentabilidad', getParentRoute: () => rootRouteImport } as any)
 const ServiciosFRoute = ServiciosFRouteImport.update({ id: '/servicios-f', path: '/servicios-f', getParentRoute: () => rootRouteImport } as any)
@@ -95,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/expedientes': typeof ExpedientesRoute
   '/informes': typeof InformesRoute
   '/login': typeof LoginRoute
+  '/oportunidades': typeof OportunidadesRoute
   '/panel': typeof PanelRoute
   '/rentabilidad': typeof RentabilidadRoute
   '/servicios-f': typeof ServiciosFRoute
@@ -133,6 +136,7 @@ export interface FileRoutesByTo {
   '/expedientes': typeof ExpedientesRoute
   '/informes': typeof InformesRoute
   '/login': typeof LoginRoute
+  '/oportunidades': typeof OportunidadesRoute
   '/panel': typeof PanelRoute
   '/rentabilidad': typeof RentabilidadRoute
   '/servicios-f': typeof ServiciosFRoute
@@ -172,6 +176,7 @@ export interface FileRoutesById {
   '/expedientes': typeof ExpedientesRoute
   '/informes': typeof InformesRoute
   '/login': typeof LoginRoute
+  '/oportunidades': typeof OportunidadesRoute
   '/panel': typeof PanelRoute
   '/rentabilidad': typeof RentabilidadRoute
   '/servicios-f': typeof ServiciosFRoute
@@ -218,6 +223,7 @@ export interface RootRouteChildren {
   ExpedientesRoute: typeof ExpedientesRoute
   InformesRoute: typeof InformesRoute
   LoginRoute: typeof LoginRoute
+  OportunidadesRoute: typeof OportunidadesRoute
   PanelRoute: typeof PanelRoute
   RentabilidadRoute: typeof RentabilidadRoute
   ServiciosFRoute: typeof ServiciosFRoute
@@ -258,6 +264,7 @@ declare module '@tanstack/react-router' {
     '/expedientes': { id: '/expedientes'; path: '/expedientes'; fullPath: '/expedientes'; preLoaderRoute: typeof ExpedientesRouteImport; parentRoute: typeof rootRouteImport }
     '/informes': { id: '/informes'; path: '/informes'; fullPath: '/informes'; preLoaderRoute: typeof InformesRouteImport; parentRoute: typeof rootRouteImport }
     '/login': { id: '/login'; path: '/login'; fullPath: '/login'; preLoaderRoute: typeof LoginRouteImport; parentRoute: typeof rootRouteImport }
+    '/oportunidades': { id: '/oportunidades'; path: '/oportunidades'; fullPath: '/oportunidades'; preLoaderRoute: typeof OportunidadesRouteImport; parentRoute: typeof rootRouteImport }
     '/panel': { id: '/panel'; path: '/panel'; fullPath: '/panel'; preLoaderRoute: typeof PanelRouteImport; parentRoute: typeof rootRouteImport }
     '/rentabilidad': { id: '/rentabilidad'; path: '/rentabilidad'; fullPath: '/rentabilidad'; preLoaderRoute: typeof RentabilidadRouteImport; parentRoute: typeof rootRouteImport }
     '/servicios-f': { id: '/servicios-f'; path: '/servicios-f'; fullPath: '/servicios-f'; preLoaderRoute: typeof ServiciosFRouteImport; parentRoute: typeof rootRouteImport }
@@ -298,6 +305,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExpedientesRoute,
   InformesRoute,
   LoginRoute,
+  OportunidadesRoute,
   PanelRoute,
   RentabilidadRoute,
   ServiciosFRoute,
