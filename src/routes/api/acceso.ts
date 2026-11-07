@@ -9,7 +9,7 @@ export const Route = createFileRoute("/api/acceso")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        if (!accesoActivo()) return Response.json({ accesoActivo: false, plan: "gest" as const });
+        if (!accesoActivo()) return Response.json({ accesoActivo: false, plan: "gest" as const, perfil: "farmacia" as const });
         const fallo = errorConfiguracion();
         if (fallo) {
           console.error("[acceso]", fallo);
@@ -30,6 +30,7 @@ export const Route = createFileRoute("/api/acceso")({
             autenticado: true,
             etiqueta: est.etiqueta,
             plan: est.plan,
+            perfil: est.perfil,
             limite: est.limite_diario,
             restantes: Math.max(0, est.limite_diario - est.consultas),
           });
@@ -61,7 +62,7 @@ export const Route = createFileRoute("/api/acceso")({
           }
           const token = await crearSesionFarmacia(fila.id, fila.generacion);
           return Response.json(
-            { ok: true, etiqueta: fila.etiqueta, plan: fila.plan },
+            { ok: true, etiqueta: fila.etiqueta, plan: fila.plan, perfil: fila.perfil },
             { headers: { "Set-Cookie": cookieSet(request, COOKIE_SESION, token, TREINTA_DIAS) } },
           );
         } catch (error) {
