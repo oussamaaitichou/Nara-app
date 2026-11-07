@@ -18,6 +18,8 @@ function asegurarEsquema(): Promise<void> {
       ultimo_uso timestamptz
     )`);
     await sql.query(`alter table piloto_codigos add column if not exists generacion integer not null default 1`);
+    await sql.query(`alter table piloto_codigos add column if not exists plan text not null default 'gest'`);
+    await sql.query(`update piloto_codigos set plan = 'gest' where plan is null or plan not in ('chat','gest')`);
     await sql.query(`create table if not exists piloto_uso (
       codigo_id integer not null references piloto_codigos(id) on delete cascade,
       dia date not null,
@@ -72,6 +74,7 @@ export type CodigoFila = {
   etiqueta: string;
   pista: string;
   limite_diario: number;
+  plan: "chat" | "gest";
   activo: boolean;
   creado: string;
   ultimo_uso: string | null;
@@ -92,12 +95,17 @@ export type ValoracionFila = {
   nota_admin: string | null;
 };
 
-export async function crearCodigo(etiqueta: string, limite: number): Promise<{ id: number; codigo: string }> {
+export async function crearCodigo(
+  etiqueta: string,
+  limite: number,
+  plan: "chat" | "gest" = "gest",
+): Promise<{ id: number; codigo: string }> {
   const sql = await db();
   const codigo = generarCodigo();
+  const planSafe = plan === "chat" ? "chat" : "gest";
   const rows = await sql<{ id: number }>`
-    insert into piloto_codigos (etiqueta, codigo_hash, pista, limite_diario)
-    values (${etiqueta}, ${hashCodigo(codigo)}, ${codigo.slice(-4)}, ${limite})
+    insert into piloto_codigos (etiqueta, codigo_hash, pista, limite_diario, plan)
+    values (${etiqueta}, ${hashCodigo(codigo)}, ${codigo.slice(-4)}, ${limite}, ${planSafe})
     returning id`;
   return { id: rows[0]!.id, codigo };
 }
@@ -113,21 +121,34 @@ export async function regenerarCodigo(id: number): Promise<string | null> {
 
 export async function buscarCodigo(
   texto: string,
-): Promise<{ id: number; etiqueta: string; activo: boolean; generacion: number } | null> {
+): Promise<{ id: number; etiqueta: string; activo: boolean; generacion: number; plan: "chat" | "gest" } | null> {
   const sql = await db();
-  const rows = await sql<{ id: number; etiqueta: string; activo: boolean; generacion: number }>`
-    select id, etiqueta, activo, generacion from piloto_codigos where codigo_hash = ${hashCodigo(texto)}`;
-  return rows[0] ?? null;
+  const rows = await sql<{ id: number; etiqueta: string; activo: boolean; generacion: number; plan: string }>`
+    select id, etiqueta, activo, generacion, coalesce(plan, 'gest') as plan
+    from piloto_codigos where codigo_hash = ${hashCodigo(texto)}`;
+  const r = rows[0];
+  if (!r) return null;
+  return { ...r, plan: r.plan === "chat" ? "chat" : "gest" };
 }
 
 export async function estadoUso(id: number) {
   const sql = await db();
-  const rows = await sql<{ etiqueta: string; limite_diario: number; activo: boolean; generacion: number; consultas: number }>`
-    select c.etiqueta, c.limite_diario, c.activo, c.generacion, coalesce(u.consultas, 0) as consultas
+  const rows = await sql<{
+    etiqueta: string;
+    limite_diario: number;
+    activo: boolean;
+    generacion: number;
+    consultas: number;
+    plan: string;
+  }>`
+    select c.etiqueta, c.limite_diario, c.activo, c.generacion, coalesce(u.consultas, 0) as consultas,
+      coalesce(c.plan, 'gest') as plan
     from piloto_codigos c
     left join piloto_uso u on u.codigo_id = c.id and u.dia = ${diaMadrid()}::date
     where c.id = ${id}`;
-  return rows[0] ?? null;
+  const r = rows[0];
+  if (!r) return null;
+  return { ...r, plan: (r.plan === "chat" ? "chat" : "gest") as "chat" | "gest" };
 }
 
 export type Consumo = { ok: true; restantes: number; limite: number } | { ok: false; motivo: "inactivo" | "limite"; limite: number };
@@ -161,7 +182,8 @@ export async function devolverConsulta(id: number): Promise<void> {
 export async function listarCodigos(): Promise<CodigoFila[]> {
   const sql = await db();
   return sql<CodigoFila>`
-    select c.id, c.etiqueta, c.pista, c.limite_diario, c.activo, c.creado, c.ultimo_uso,
+    select c.id, c.etiqueta, c.pista, c.limite_diario, coalesce(c.plan, 'gest') as plan,
+      c.activo, c.creado, c.ultimo_uso,
       coalesce(u.consultas, 0) as hoy,
       (select count(*) from piloto_valoraciones v where v.codigo_id = c.id) as valoraciones
     from piloto_codigos c
@@ -169,10 +191,17 @@ export async function listarCodigos(): Promise<CodigoFila[]> {
     order by c.creado desc`;
 }
 
-export async function actualizarCodigo(id: number, campos: { activo?: boolean; limite?: number }): Promise<void> {
+export async function actualizarCodigo(
+  id: number,
+  campos: { activo?: boolean; limite?: number; plan?: "chat" | "gest" },
+): Promise<void> {
   const sql = await db();
   if (campos.activo !== undefined) await sql`update piloto_codigos set activo = ${campos.activo} where id = ${id}`;
   if (campos.limite !== undefined) await sql`update piloto_codigos set limite_diario = ${campos.limite} where id = ${id}`;
+  if (campos.plan !== undefined) {
+    const plan = campos.plan === "chat" ? "chat" : "gest";
+    await sql`update piloto_codigos set plan = ${plan} where id = ${id}`;
+  }
 }
 
 export async function guardarValoracion(v: {
