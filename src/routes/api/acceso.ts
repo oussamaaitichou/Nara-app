@@ -8,9 +8,8 @@ const TREINTA_DIAS = 60 * 60 * 24 * 30;
 export const Route = createFileRoute("/api/acceso")({
   server: {
     handlers: {
-      // Estado del acceso: ¿está activo el piloto?, ¿hay sesión?, ¿cuántas consultas quedan hoy?
       GET: async ({ request }) => {
-        if (!accesoActivo()) return Response.json({ accesoActivo: false });
+        if (!accesoActivo()) return Response.json({ accesoActivo: false, plan: "gest" as const });
         const fallo = errorConfiguracion();
         if (fallo) {
           console.error("[acceso]", fallo);
@@ -30,6 +29,7 @@ export const Route = createFileRoute("/api/acceso")({
             accesoActivo: true,
             autenticado: true,
             etiqueta: est.etiqueta,
+            plan: est.plan,
             limite: est.limite_diario,
             restantes: Math.max(0, est.limite_diario - est.consultas),
           });
@@ -39,7 +39,6 @@ export const Route = createFileRoute("/api/acceso")({
         }
       },
 
-      // Entrar con un código
       POST: async ({ request }) => {
         if (!accesoActivo()) return Response.json({ error: "El acceso por código no está activado." }, { status: 404 });
         const fallo = errorConfiguracion();
@@ -57,12 +56,12 @@ export const Route = createFileRoute("/api/acceso")({
         try {
           const fila = codigo.trim() ? await buscarCodigo(codigo) : null;
           if (!fila || !fila.activo) {
-            await pausa(700); // frena los intentos al azar
+            await pausa(700);
             return Response.json({ error: "Código no válido o desactivado." }, { status: 401 });
           }
           const token = await crearSesionFarmacia(fila.id, fila.generacion);
           return Response.json(
-            { ok: true, etiqueta: fila.etiqueta },
+            { ok: true, etiqueta: fila.etiqueta, plan: fila.plan },
             { headers: { "Set-Cookie": cookieSet(request, COOKIE_SESION, token, TREINTA_DIAS) } },
           );
         } catch (error) {
@@ -71,7 +70,6 @@ export const Route = createFileRoute("/api/acceso")({
         }
       },
 
-      // Salir
       DELETE: async ({ request }) =>
         Response.json({ ok: true }, { headers: { "Set-Cookie": cookieBorrar(request, COOKIE_SESION) } }),
     },
