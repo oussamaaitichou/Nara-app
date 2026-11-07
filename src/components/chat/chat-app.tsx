@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { AlertTriangle, ArrowUp, LogOut, Menu, Plus, ShieldAlert, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowUp } from "lucide-react";
 import { NaraMark, NaraWordmark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { AccessGate } from "@/components/chat/access-gate";
-import { FeedbackButtons } from "@/components/chat/feedback-buttons";
 import { Markdown } from "@/lib/chat/markdown";
 import { TOPICS } from "@/lib/chat/knowledge";
-import { parseNaraPayload, ESCALATE_COPY } from "@/lib/chat/parse";
+import { parseNaraPayload } from "@/lib/chat/parse";
 import { selectActive, useChatStore } from "@/lib/chat/store";
-import type { ChatMessage } from "@/lib/chat/types";
 import { cn } from "@/lib/utils";
 
 async function streamNara(
@@ -58,7 +55,14 @@ async function streamNara(
   }
 }
 
-export function ChatApp({ initialQuestion, initialTopic }: { initialQuestion?: string; initialTopic?: string }) {
+const BUSINESS_STARTERS = [
+  "¿Cómo está funcionando mi farmacia?",
+  "¿Qué debería revisar hoy en el stock?",
+  "¿Dónde estoy perdiendo margen?",
+  "¿Qué pedidos tengo pendientes?",
+];
+
+export function ChatApp({ initialQuestion }: { initialQuestion?: string; initialTopic?: string }) {
   const active = useChatStore(selectActive);
   const ensureActive = useChatStore((s) => s.ensureActive);
   const appendMessage = useChatStore((s) => s.appendMessage);
@@ -67,28 +71,52 @@ export function ChatApp({ initialQuestion, initialTopic }: { initialQuestion?: s
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
-  const [acceso, setAcceso] = useState({ cargando: true, requerido: false, autenticado: true as boolean, restantes: undefined as number | undefined, limite: undefined as number | undefined });
+  const [acceso, setAcceso] = useState({
+    cargando: true,
+    requerido: false,
+    autenticado: true as boolean,
+    restantes: undefined as number | undefined,
+    limite: undefined as number | undefined,
+  });
   const scroller = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const bootstrapped = useRef(false);
 
   async function refrescarAcceso() {
     try {
       const res = await fetch("/api/acceso");
-      const json = (await res.json()) as { accesoActivo?: boolean; autenticado?: boolean; restantes?: number; limite?: number };
-      setAcceso({ cargando: false, requerido: !!json.accesoActivo, autenticado: json.accesoActivo ? !!json.autenticado : true, restantes: json.restantes, limite: json.limite });
+      const json = (await res.json()) as {
+        accesoActivo?: boolean;
+        autenticado?: boolean;
+        restantes?: number;
+        limite?: number;
+      };
+      setAcceso({
+        cargando: false,
+        requerido: !!json.accesoActivo,
+        autenticado: json.accesoActivo ? !!json.autenticado : true,
+        restantes: json.restantes,
+        limite: json.limite,
+      });
     } catch {
       setAcceso((a) => ({ ...a, cargando: false }));
     }
   }
 
-  useEffect(() => { void refrescarAcceso(); }, []);
+  useEffect(() => {
+    void refrescarAcceso();
+  }, []);
   useEffect(() => {
     let alive = true;
-    const done = () => { if (alive) setHydrated(true); };
+    const done = () => {
+      if (alive) setHydrated(true);
+    };
     const result = useChatStore.persist.rehydrate();
     if (result && typeof (result as Promise<void>).then === "function") void (result as Promise<void>).then(done, done);
     else done();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
   useEffect(() => {
     const el = scroller.current;
@@ -105,16 +133,26 @@ export function ChatApp({ initialQuestion, initialTopic }: { initialQuestion?: s
     const assistantId = appendMessage(conversationId, { role: "assistant", content: "" });
     setBusy(true);
     const conv = useChatStore.getState().conversations.find((c) => c.id === conversationId);
-    const history = (conv?.messages ?? []).filter((m) => m.id !== assistantId && m.content && !m.error).map((m) => ({ role: m.role, content: m.content }));
+    const history = (conv?.messages ?? [])
+      .filter((m) => m.id !== assistantId && m.content && !m.error)
+      .map((m) => ({ role: m.role, content: m.content }));
     let raw = "";
     try {
       await streamNara(history, (token) => {
         raw += token;
         const parsed = parseNaraPayload(raw);
-        patchMessage(conversationId, assistantId, { content: parsed.content, followUps: parsed.followUps, escalate: parsed.escalate });
+        patchMessage(conversationId, assistantId, {
+          content: parsed.content,
+          followUps: parsed.followUps,
+          escalate: parsed.escalate,
+        });
       });
       const parsed = parseNaraPayload(raw);
-      patchMessage(conversationId, assistantId, { content: parsed.content || "No he podido completar la respuesta.", followUps: parsed.followUps, escalate: parsed.escalate });
+      patchMessage(conversationId, assistantId, {
+        content: parsed.content || "No he podido completar la respuesta.",
+        followUps: parsed.followUps,
+        escalate: parsed.escalate,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Nara no ha podido responder.";
       setError(message);
@@ -127,11 +165,19 @@ export function ChatApp({ initialQuestion, initialTopic }: { initialQuestion?: s
     }
   }
 
+  useEffect(() => {
+    if (!hydrated || bootstrapped.current || !initialQuestion?.trim()) return;
+    bootstrapped.current = true;
+    void send(initialQuestion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, initialQuestion]);
+
   if (acceso.cargando) return <div className="flex min-h-dvh items-center justify-center bg-bg" aria-busy="true" />;
   if (acceso.requerido && !acceso.autenticado) return <AccessGate onSuccess={() => void refrescarAcceso()} />;
 
   const empty = !active || active.messages.length === 0;
-  const starters = TOPICS.flatMap((t) => t.starters.slice(0, 1)).slice(0, 6);
+  const topicStarters = TOPICS.flatMap((t) => t.starters.slice(0, 1)).slice(0, 4);
+  const starters = [...BUSINESS_STARTERS, ...topicStarters].slice(0, 8);
 
   return (
     <div className="flex h-dvh min-h-0 bg-bg">
@@ -139,19 +185,33 @@ export function ChatApp({ initialQuestion, initialTopic }: { initialQuestion?: s
         <header className="flex h-16 items-center justify-between gap-3 border-b border-line bg-surface/90 px-3 sm:px-5">
           <NaraWordmark />
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild><a href="/panel">Panel</a></Button>
-            <Button variant="ghost" size="sm" asChild><a href="/">Inicio</a></Button>
+            <Button variant="ghost" size="sm" asChild>
+              <a href="/panel">Panel</a>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <a href="/">Inicio</a>
+            </Button>
           </div>
         </header>
         <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
           {empty ? (
             <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-10">
               <NaraMark className="size-12" />
-              <h1 className="font-display text-3xl font-semibold text-ink">¿Qué te está pasando en el mostrador?</h1>
-              <p className="text-muted">Receta, sustitución, guardia o inspección. Puedes adjuntar Excel y fotos cuando activemos el clip.</p>
+              <h1 className="font-display text-3xl font-semibold text-ink">¿En qué te ayudo hoy?</h1>
+              <p className="text-muted">
+                Gestión, stock, márgenes o mostrador. Si preguntas por el negocio, Nara usa el snapshot de NaraGest (piloto).
+              </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {starters.map((s) => (
-                  <button key={s} type="button" onClick={() => void send(s)} disabled={busy || !hydrated} className="rounded-lg border border-line bg-surface px-4 py-3 text-left text-sm hover:border-teal">{s}</button>
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => void send(s)}
+                    disabled={busy || !hydrated}
+                    className="rounded-lg border border-line bg-surface px-4 py-3 text-left text-sm hover:border-teal"
+                  >
+                    {s}
+                  </button>
                 ))}
               </div>
             </div>
@@ -160,7 +220,12 @@ export function ChatApp({ initialQuestion, initialTopic }: { initialQuestion?: s
               {active.messages.map((m) => (
                 <div key={m.id} className={cn("flex gap-3", m.role === "user" ? "justify-end" : "justify-start")}>
                   {m.role !== "user" && <NaraMark className="mt-1 size-8 shrink-0" />}
-                  <div className={cn("max-w-[min(100%,40rem)] rounded-xl px-4 py-3", m.role === "user" ? "bg-teal text-primary-foreground" : "bg-surface ring-1 ring-line")}>
+                  <div
+                    className={cn(
+                      "max-w-[min(100%,40rem)] rounded-xl px-4 py-3",
+                      m.role === "user" ? "bg-teal text-primary-foreground" : "bg-surface ring-1 ring-line",
+                    )}
+                  >
                     {m.role === "user" ? <p className="whitespace-pre-wrap">{m.content}</p> : <Markdown text={m.content} />}
                   </div>
                 </div>
@@ -169,9 +234,32 @@ export function ChatApp({ initialQuestion, initialTopic }: { initialQuestion?: s
           )}
         </div>
         <div className="border-t border-line bg-surface px-3 py-3 sm:px-5">
-          <form className="mx-auto flex max-w-3xl items-end gap-2" onSubmit={(e) => { e.preventDefault(); void send(draft); }}>
-            <Textarea ref={textareaRef} value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(draft); } }} placeholder="Escribe el caso… Enter para enviar" rows={1} className="min-h-12 max-h-40 resize-none py-3" disabled={busy} maxLength={4000} />
-            <Button type="submit" size="icon" disabled={busy || !draft.trim()} aria-label="Enviar"><ArrowUp className="size-5" /></Button>
+          <form
+            className="mx-auto flex max-w-3xl items-end gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void send(draft);
+            }}
+          >
+            <Textarea
+              ref={textareaRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void send(draft);
+                }
+              }}
+              placeholder="Escribe el caso… Enter para enviar"
+              rows={1}
+              className="min-h-12 max-h-40 resize-none py-3"
+              disabled={busy}
+              maxLength={4000}
+            />
+            <Button type="submit" size="icon" disabled={busy || !draft.trim()} aria-label="Enviar">
+              <ArrowUp className="size-5" />
+            </Button>
           </form>
           {error ? <p className="mx-auto mt-2 max-w-3xl text-sm text-danger">{error}</p> : null}
         </div>
