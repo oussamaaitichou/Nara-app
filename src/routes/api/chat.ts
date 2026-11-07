@@ -7,6 +7,7 @@ import { consumirConsulta, devolverConsulta } from "@/lib/piloto/db.server";
 import { sesionDe } from "@/lib/piloto/sesion.server";
 import { SSE_HEADERS, flujoSSE, llamarIA, type MensajeIA, type Parte } from "@/lib/chat/motor.server";
 import { procesarAdjuntos } from "@/lib/erp/adjuntos.server";
+import { formatNaragestContext } from "@/lib/naragest/chat-context";
 
 const MAX_MESSAGES = 40;
 const MAX_TOTAL_CHARS = 28000;
@@ -16,6 +17,14 @@ type Incoming = { role: "user" | "assistant"; content: string };
 
 function fail(message: string, status: number) {
   return Response.json({ error: message }, { status });
+}
+
+/** Preguntas de negocio de la farmacia → inyectar KPIs e insights NaraGest. */
+function quiereDatosNegocio(query: string): boolean {
+  const q = query.toLowerCase();
+  return /(
+    farmacia|negocio|ventas|compra|stock|inventario|margen|rentabil|\n    caduc|pedido|proveedor|c[oó]mo va|c[oó]mo est[aá]|perd|\n    beneficio|factur|kpi|dashboard|panel|nara\s*gest|alert
+  )/i.test(q);
 }
 
 export const Route = createFileRoute("/api/chat")({
@@ -91,14 +100,36 @@ export const Route = createFileRoute("/api/chat")({
         const query = [userTurns.slice(-2).map((m) => m.content).join(" "), textosAdj].filter(Boolean).join("\n");
         const found = retrieve(query || "archivo adjunto farmacia");
         const clasificacion = clasificar(query || "documento");
+
+        let contexto = formatContext(found);
+        if (quiereDatosNegocio(query)) {
+          try {
+            const ng = formatNaragestContext(new Date());
+            contexto = [contexto, ng].filter(Boolean).join("\n\n");
+          } catch (e) {
+            console.error("[chat] NaraGest context", e);
+          }
+        }
+
         const systemPrompt = construirPrompt({
           cerebro: CEREBRO,
           estilo: ESTILO,
           clasificacion,
-          contexto: formatContext(found),
+          contexto,
           fecha: fechaHoy(),
+          adjuntos: items.length > 0,
         });
-        console.log("[chat-log]", JSON.stringify({ riesgo: clasificacion.riesgo, temas: clasificacion.temas, docs: found.map((c) => c.id), acceso: codigoId, adjuntos: items.length }));
+        console.log(
+          "[chat-log]",
+          JSON.stringify({
+            riesgo: clasificacion.riesgo,
+            temas: clasificacion.temas,
+            docs: found.map((c) => c.id),
+            acceso: codigoId,
+            adjuntos: items.length,
+            naragest: quiereDatosNegocio(query),
+          }),
+        );
         const sources = formatSources(found);
 
         if (codigoId !== null) {
