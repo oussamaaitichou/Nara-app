@@ -20,11 +20,37 @@ function fail(message: string, status: number) {
   return Response.json({ error: message }, { status });
 }
 
+const NEGOCIO_KEYS = [
+  "farmacia",
+  "negocio",
+  "ventas",
+  "compra",
+  "stock",
+  "inventario",
+  "margen",
+  "rentabil",
+  "caduc",
+  "pedido",
+  "proveedor",
+  "como va",
+  "cómo va",
+  "como esta",
+  "cómo está",
+  "perd",
+  "beneficio",
+  "factur",
+  "kpi",
+  "dashboard",
+  "panel",
+  "naragest",
+  "nara gest",
+  "alert",
+  "prioriz",
+];
+
 function quiereDatosNegocio(query: string): boolean {
   const q = query.toLowerCase();
-  return /(
-    farmacia|negocio|ventas|compra|stock|inventario|margen|rentabil|\n    caduc|pedido|proveedor|c[oó]mo va|c[oó]mo est[aá]|perd|\n    beneficio|factur|kpi|dashboard|panel|nara\s*gest|alert|prioriz
-  )/i.test(q);
+  return NEGOCIO_KEYS.some((k) => q.includes(k));
 }
 
 export const Route = createFileRoute("/api/chat")({
@@ -157,7 +183,9 @@ export const Route = createFileRoute("/api/chat")({
         const mensajesIA: MensajeIA[] = trimmed.map((m, idx) => {
           const esUltimoUser = m.role === "user" && idx === trimmed.length - 1;
           if (!esUltimoUser || !items.length) return { role: m.role, content: m.content };
-          const partes: Parte[] = [{ type: "text", text: m.content || "Analiza el archivo adjunto en contexto de oficina de farmacia." }];
+          const partes: Parte[] = [
+            { type: "text", text: m.content || "Analiza el archivo adjunto en contexto de oficina de farmacia." },
+          ];
           for (const it of items) {
             if (it.tipo === "texto") partes.push({ type: "text", text: `\n\n--- Archivo: ${it.nombre} ---\n${it.texto}` });
             else if (it.tipo === "imagen") partes.push({ type: "image_url", image_url: { url: it.url } });
@@ -165,7 +193,12 @@ export const Route = createFileRoute("/api/chat")({
           return { role: "user", content: partes };
         });
         if (!trimmed.length && items.length) {
-          const partes: Parte[] = [{ type: "text", text: "Analiza estos archivos en contexto de oficina de farmacia española. Resume lo relevante y da orientación profesional." }];
+          const partes: Parte[] = [
+            {
+              type: "text",
+              text: "Analiza estos archivos en contexto de oficina de farmacia española. Resume lo relevante y da orientación profesional.",
+            },
+          ];
           for (const it of items) {
             if (it.tipo === "texto") partes.push({ type: "text", text: `\n\n--- Archivo: ${it.nombre} ---\n${it.texto}` });
             else if (it.tipo === "imagen") partes.push({ type: "image_url", image_url: { url: it.url } });
