@@ -53,6 +53,21 @@ function quiereDatosNegocio(query: string): boolean {
   return NEGOCIO_KEYS.some((k) => q.includes(k));
 }
 
+function partesAdjuntos(
+  items: { tipo: string; nombre: string; texto?: string; dataUrl?: string }[],
+  textoBase: string,
+): Parte[] {
+  const partes: Parte[] = [{ type: "text", text: textoBase }];
+  for (const it of items) {
+    if (it.tipo === "texto" && it.texto) {
+      partes.push({ type: "text", text: `\n\n--- Archivo: ${it.nombre} ---\n${it.texto}` });
+    } else if (it.tipo === "imagen" && it.dataUrl) {
+      partes.push({ type: "image_url", image_url: { url: it.dataUrl } });
+    }
+  }
+  return partes;
+}
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
@@ -94,7 +109,7 @@ export const Route = createFileRoute("/api/chat")({
         let items: Awaited<ReturnType<typeof procesarAdjuntos>> extends { ok: true; items: infer I } ? I : never = [];
         if (hayAdjuntos) {
           if (!archivosActivos()) {
-            return fail("La subida de archivos no está activada (pon ARCHIVOS_ACTIVOS=si en Vercel).", 403);
+            return fail("La subida de archivos no está activada (pon ARCHIVOS_ACTIVOS=si o quita ARCHIVOS_ACTIVOS=no).", 403);
           }
           const adjuntos = await procesarAdjuntos(body.adjuntos);
           if (!adjuntos.ok) return fail(adjuntos.error, 400);
@@ -183,27 +198,22 @@ export const Route = createFileRoute("/api/chat")({
         const mensajesIA: MensajeIA[] = trimmed.map((m, idx) => {
           const esUltimoUser = m.role === "user" && idx === trimmed.length - 1;
           if (!esUltimoUser || !items.length) return { role: m.role, content: m.content };
-          const partes: Parte[] = [
-            { type: "text", text: m.content || "Analiza el archivo adjunto en contexto de oficina de farmacia." },
-          ];
-          for (const it of items) {
-            if (it.tipo === "texto") partes.push({ type: "text", text: `\n\n--- Archivo: ${it.nombre} ---\n${it.texto}` });
-            else if (it.tipo === "imagen") partes.push({ type: "image_url", image_url: { url: it.url } });
-          }
-          return { role: "user", content: partes };
+          return {
+            role: "user",
+            content: partesAdjuntos(
+              items,
+              m.content || "Analiza el archivo adjunto en contexto de oficina de farmacia.",
+            ),
+          };
         });
         if (!trimmed.length && items.length) {
-          const partes: Parte[] = [
-            {
-              type: "text",
-              text: "Analiza estos archivos en contexto de oficina de farmacia española. Resume lo relevante y da orientación profesional.",
-            },
-          ];
-          for (const it of items) {
-            if (it.tipo === "texto") partes.push({ type: "text", text: `\n\n--- Archivo: ${it.nombre} ---\n${it.texto}` });
-            else if (it.tipo === "imagen") partes.push({ type: "image_url", image_url: { url: it.url } });
-          }
-          mensajesIA.push({ role: "user", content: partes });
+          mensajesIA.push({
+            role: "user",
+            content: partesAdjuntos(
+              items,
+              "Analiza estos archivos en contexto de oficina de farmacia española. Resume lo relevante y da orientación profesional.",
+            ),
+          });
         }
 
         const r = await llamarIA(systemPrompt, mensajesIA);
