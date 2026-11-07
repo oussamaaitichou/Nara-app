@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, FileText, Image as ImageIcon, Paperclip, X } from "lucide-react";
 import { NaraMark, NaraWordmark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,8 +11,41 @@ import { selectActive, useChatStore } from "@/lib/chat/store";
 import { formatNaragestContext } from "@/lib/naragest/chat-context";
 import { cn } from "@/lib/utils";
 
+type AdjuntoLocal = { id: string; nombre: string; datos: string; esImagen: boolean };
+
+const ACCEPT =
+  "image/png,image/jpeg,image/webp,application/pdf,.docx,.xlsx,.csv,text/plain,text/csv";
+const MAX_FILES = 8;
+const MAX_FILE_BYTES = 3_000_000;
+
+function leerArchivo(file: File): Promise<AdjuntoLocal> {
+  return new Promise((resolve, reject) => {
+    if (file.size > MAX_FILE_BYTES) {
+      reject(new Error(`«${file.name}» pesa más de 3 MB.`));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const datos = String(reader.result ?? "");
+      if (!datos.startsWith("data:")) {
+        reject(new Error(`No se ha podido leer «${file.name}».`));
+        return;
+      }
+      resolve({
+        id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+        nombre: file.name,
+        datos,
+        esImagen: file.type.startsWith("image/"),
+      });
+    };
+    reader.onerror = () => reject(new Error(`No se ha podido leer «${file.name}».`));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function streamNara(
   history: { role: "user" | "assistant"; content: string }[],
+  adjuntos: { nombre: string; datos: string }[],
   onToken: (t: string) => void,
 ) {
   let naragestSnapshot = "";
@@ -25,7 +58,11 @@ async function streamNara(
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages: history, naragestSnapshot }),
+    body: JSON.stringify({
+      messages: history,
+      naragestSnapshot,
+      adjuntos: adjuntos.length ? adjuntos : undefined,
+    }),
   });
   if (!res.ok) {
     let message = "Nara no ha podido responder.";
@@ -76,6 +113,7 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
   const appendMessage = useChatStore((s) => s.appendMessage);
   const patchMessage = useChatStore((s) => s.patchMessage);
   const [draft, setDraft] = useState("");
+  const [pending, setPending] = useState<AdjuntoLocal[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -88,6 +126,7 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
   });
   const scroller = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const bootstrapped = useRef(false);
 
   async function refrescarAcceso() {
@@ -129,32 +168,71 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
   useEffect(() => {
     const el = scroller.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [active?.messages, busy]);
+  }, [active?.messages, busy, pending]);
 
-  async function send(text: string) {
+  async function onPickFiles(list: FileList | null) {
+    if (!list?.length) return;
+    setError(null);
+    const room = MAX_FILES - pending.length;
+    if (room <= 0) {
+      setError(`Máximo ${MAX_FILES} archivos por mensaje.`);
+      return;
+    }
+    const files = Array.from(list).slice(0, room);
+    try {
+      const leidos = await Promise.all(files.map(leerArchivo));
+      setPending((p) => [...p, ...leidos].slice(0, MAX_FILES));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se han podido leer los archivos.");
+    }
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  async function send(text: string, files = pending) {
     const content = text.trim();
-    if (!content || busy || !hydrated) return;
+    if ((!content && files.length === 0) || busy || !hydrated) return;
     setError(null);
     setDraft("");
+    setPending([]);
     const conversationId = ensureActive();
-    appendMessage(conversationId, { role: "user", content });
+    const label =
+      content ||
+      (files.length === 1
+        ? `📎 ${files[0]!.nombre}`
+        : `📎 ${files.length} archivos`);
+    const userShown =
+      files.length && content
+        ? `${content}\n\n(${files.length === 1 ? files[0]!.nombre : `${files.length} archivos adjuntos`})`
+        : label;
+    appendMessage(conversationId, { role: "user", content: userShown });
     const assistantId = appendMessage(conversationId, { role: "assistant", content: "" });
     setBusy(true);
     const conv = useChatStore.getState().conversations.find((c) => c.id === conversationId);
     const history = (conv?.messages ?? [])
       .filter((m) => m.id !== assistantId && m.content && !m.error)
       .map((m) => ({ role: m.role, content: m.content }));
+    // El último mensaje de usuario en historial ya incluye el label; para la API usamos el texto limpio
+    if (history.length) {
+      history[history.length - 1] = {
+        role: "user",
+        content: content || "Analiza el archivo adjunto en contexto de oficina de farmacia.",
+      };
+    }
     let raw = "";
     try {
-      await streamNara(history, (token) => {
-        raw += token;
-        const parsed = parseNaraPayload(raw);
-        patchMessage(conversationId, assistantId, {
-          content: parsed.content,
-          followUps: parsed.followUps,
-          escalate: parsed.escalate,
-        });
-      });
+      await streamNara(
+        history,
+        files.map((f) => ({ nombre: f.nombre, datos: f.datos })),
+        (token) => {
+          raw += token;
+          const parsed = parseNaraPayload(raw);
+          patchMessage(conversationId, assistantId, {
+            content: parsed.content,
+            followUps: parsed.followUps,
+            escalate: parsed.escalate,
+          });
+        },
+      );
       const parsed = parseNaraPayload(raw);
       patchMessage(conversationId, assistantId, {
         content: parsed.content || "No he podido completar la respuesta.",
@@ -186,6 +264,7 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
   const empty = !active || active.messages.length === 0;
   const topicStarters = TOPICS.flatMap((t) => t.starters.slice(0, 1)).slice(0, 4);
   const starters = [...BUSINESS_STARTERS, ...topicStarters].slice(0, 8);
+  const canSend = !busy && hydrated && (!!draft.trim() || pending.length > 0);
 
   return (
     <div className="flex h-dvh min-h-0 bg-bg">
@@ -207,8 +286,8 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
               <NaraMark className="size-12" />
               <h1 className="font-display text-3xl font-semibold text-ink">¿En qué te ayudo hoy?</h1>
               <p className="text-muted">
-                Gestión, stock, márgenes o mostrador. Cada consulta lleva el snapshot de NaraGest de este navegador
-                (compras, ventas, márgenes y alertas de stock).
+                Gestión, stock, márgenes o mostrador. Puedes adjuntar fotos, PDF, Word, Excel o CSV (clip abajo).
+                Cada consulta lleva el snapshot de NaraGest de este navegador.
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {starters.map((s) => (
@@ -243,6 +322,27 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
           )}
         </div>
         <div className="border-t border-line bg-surface px-3 py-3 sm:px-5">
+          {pending.length > 0 ? (
+            <div className="mx-auto mb-2 flex max-w-3xl flex-wrap gap-2">
+              {pending.map((f) => (
+                <span
+                  key={f.id}
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-line bg-bg px-2.5 py-1 text-xs text-ink"
+                >
+                  {f.esImagen ? <ImageIcon className="size-3.5 shrink-0" /> : <FileText className="size-3.5 shrink-0" />}
+                  <span className="truncate">{f.nombre}</span>
+                  <button
+                    type="button"
+                    className="rounded-full p-0.5 text-muted hover:bg-line hover:text-ink"
+                    aria-label={`Quitar ${f.nombre}`}
+                    onClick={() => setPending((p) => p.filter((x) => x.id !== f.id))}
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
           <form
             className="mx-auto flex max-w-3xl items-end gap-2"
             onSubmit={(e) => {
@@ -250,6 +350,25 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
               void send(draft);
             }}
           >
+            <input
+              ref={fileRef}
+              type="file"
+              className="hidden"
+              accept={ACCEPT}
+              multiple
+              onChange={(e) => void onPickFiles(e.target.files)}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              disabled={busy || pending.length >= MAX_FILES}
+              aria-label="Adjuntar archivo o foto"
+              title="Fotos, PDF, Word, Excel, CSV o TXT (máx. 3 MB c/u)"
+              onClick={() => fileRef.current?.click()}
+            >
+              <Paperclip className="size-5" />
+            </Button>
             <Textarea
               ref={textareaRef}
               value={draft}
@@ -260,16 +379,20 @@ export function ChatApp({ initialQuestion }: { initialQuestion?: string; initial
                   void send(draft);
                 }
               }}
-              placeholder="Escribe el caso… Enter para enviar"
+              placeholder="Escribe o adjunta un archivo… Enter para enviar"
               rows={1}
               className="min-h-12 max-h-40 resize-none py-3"
               disabled={busy}
               maxLength={4000}
             />
-            <Button type="submit" size="icon" disabled={busy || !draft.trim()} aria-label="Enviar">
+            <Button type="submit" size="icon" disabled={!canSend} aria-label="Enviar">
               <ArrowUp className="size-5" />
             </Button>
           </form>
+          <p className="mx-auto mt-2 max-w-3xl text-[11px] text-muted">
+            PNG, JPG, WebP, PDF, Word, Excel, CSV o TXT · hasta {MAX_FILES} por mensaje · 3 MB por archivo. No adjuntes
+            datos de pacientes ni historias clínicas.
+          </p>
           {error ? <p className="mx-auto mt-2 max-w-3xl text-sm text-danger">{error}</p> : null}
         </div>
       </div>
