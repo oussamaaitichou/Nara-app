@@ -2,23 +2,22 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   AlertTriangle,
   ArrowRight,
-  Bell,
-  CalendarDays,
-  CheckCircle2,
-  ClipboardList,
+  Lightbulb,
   MessageSquare,
   Package,
+  ShoppingCart,
   Sparkles,
   TrendingUp,
-  Users,
   Wallet,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
+import { buildDashboardInsights, type Insight } from "@/lib/naragest/insights";
 
 export const Route = createFileRoute("/panel")({
   component: NaraGestHome,
   head: () => ({
-    meta: [{ title: "NaraGest — Gestión de farmacia" }],
+    meta: [{ title: "NaraGest — Dashboard inteligente" }],
   }),
 });
 
@@ -29,6 +28,10 @@ function saludo() {
   return "Buenas noches";
 }
 
+function eur(n: number) {
+  return n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
+}
+
 function NaraGestHome() {
   const fecha = new Date().toLocaleDateString("es-ES", {
     weekday: "long",
@@ -36,130 +39,155 @@ function NaraGestHome() {
     month: "long",
   });
 
+  const [insights, setInsights] = useState<Insight[]>([]);
+  const [kpis, setKpis] = useState({
+    ventasNetas: 0,
+    compras: 0,
+    margenPct: 0,
+    margenEur: 0,
+    stockCaducidad: 0,
+    stockBajo: 0,
+    stockExceso: 0,
+    pedidosPendientes: 0,
+  });
+
+  useEffect(() => {
+    const data = buildDashboardInsights(new Date("2026-11-06"));
+    setInsights(data.insights);
+    setKpis(data.kpis);
+  }, []);
+
   return (
-    <AppShell title="NaraGest" subtitle="Gestión de la oficina de farmacia">
+    <AppShell title="NaraGest" subtitle="Dashboard inteligente · qué pasa y qué hacer">
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold tracking-wide text-[#3B6EF5] uppercase">{fecha}</p>
               <h2 className="mt-1 font-display text-2xl font-semibold tracking-tight text-slate-900">
-                {saludo()}. Estás en NaraGest.
+                {saludo()}. Tu farmacia de un vistazo.
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
-                <strong className="font-medium text-slate-800">Nara</strong> es el producto completo.
-                <strong className="font-medium text-slate-800"> NaraGest</strong> gestiona la farmacia: stock, equipo, caja y el día a día del turno.
+                <strong className="text-slate-800">Nara</strong> interpreta y recomienda.{" "}
+                <strong className="text-slate-800">NaraGest</strong> concentra stock, compras, ventas y rentabilidad.
+                Las cifras sensibles las valida siempre el titular.
               </p>
             </div>
-            <Link
-              to="/consulta"
-              className="inline-flex h-10 items-center gap-2 rounded-full bg-[#3B6EF5] px-4 text-sm font-semibold text-white shadow-sm shadow-blue-500/20"
-            >
-              <Sparkles className="size-4" /> Preguntar a Nara
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to="/oportunidades"
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700"
+              >
+                <Lightbulb className="size-4 text-amber-500" /> Ideas
+              </Link>
+              <Link
+                to="/consulta"
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-[#3B6EF5] px-4 text-sm font-semibold text-white shadow-sm shadow-blue-500/20"
+              >
+                <Sparkles className="size-4" /> Preguntar a Nara
+              </Link>
+            </div>
           </div>
         </section>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-          <MetricCard label="Ventas del día" value="—" hint="Ticket / caja" icon={Wallet} tone="peach" to="/ventas" delta="+10.5%" />
-          <MetricCard label="Ticket medio" value="—" hint="Excel o TPV" icon={TrendingUp} tone="lilac" to="/ventas" delta="+10.5%" />
-          <MetricCard label="Stock bajo" value="8" hint="Bajo mínimo" icon={Package} tone="sky" to="/stock" />
-          <MetricCard label="Caducidades" value="12" hint="Próximos 90 días" icon={AlertTriangle} tone="peach" to="/caducidades" />
-          <MetricCard label="Tareas pendientes" value="5" hint="Turno actual" icon={ClipboardList} tone="mint" to="/tareas" />
-          <MetricCard label="Equipo en turno" value="—" hint="Plantilla" icon={Users} tone="mint" to="/equipo" />
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-          <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-lg font-semibold text-slate-900">Próximos vencimientos</h3>
-              <Link to="/calendario" className="text-xs font-semibold text-[#3B6EF5]">
-                Ver calendario
-              </Link>
-            </div>
-            <ul className="mt-4 space-y-2.5">
-              {[
-                { c: "Caducidad lote amoxicilina", d: "En 12 días", s: "Stock" },
-                { c: "Revisión temperatura nevera 2", d: "Hoy", s: "Control" },
-                { c: "Guardia de domingo", d: "En 4 días", s: "Equipo" },
-                { c: "Pedido programado COFARES", d: "Mañana", s: "Compras" },
-              ].map((v) => (
-                <li key={v.c} className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-[#F7F8FC] px-3 py-2.5">
-                  <CalendarDays className="size-4 shrink-0 text-[#3B6EF5]" />
+        {/* FarmaIA: Tu IA ha detectado esto */}
+        <section className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-white p-5 shadow-sm sm:p-6">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-5 text-[#3B6EF5]" />
+            <h3 className="font-display text-lg font-semibold text-slate-900">
+              Nara ha detectado esto hoy
+            </h3>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Conclusiones con reglas transparentes sobre stock, compras, ventas y márgenes. No sustituyen el criterio profesional.
+          </p>
+          <ul className="mt-4 space-y-3">
+            {insights.map((ins) => (
+              <li
+                key={ins.id}
+                className="rounded-2xl border border-slate-100 bg-white/90 p-4 shadow-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-800">{v.c}</p>
-                    <p className="text-[11px] text-slate-500">{v.s}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <ToneBadge tone={ins.tone} />
+                      <p className="font-semibold text-slate-900">{ins.title}</p>
+                    </div>
+                    <p className="mt-1.5 text-sm text-slate-600">{ins.body}</p>
+                    {ins.impact ? (
+                      <p className="mt-1 text-xs font-medium text-slate-800">{ins.impact}</p>
+                    ) : null}
+                    <p className="mt-1 text-[10px] text-slate-400">Fuente: {ins.source}</p>
                   </div>
-                  <span className="text-xs font-semibold text-[#3B6EF5]">{v.d}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+                  <Link
+                    to={ins.href}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#3B6EF5] px-3 py-1.5 text-xs font-semibold text-white"
+                  >
+                    {ins.cta} <ArrowRight className="size-3.5" />
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
 
-          <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-lg font-semibold text-slate-900">Tareas prioritarias</h3>
-              <Link to="/tareas" className="text-xs font-semibold text-[#3B6EF5]">
-                Ver todas
-              </Link>
-            </div>
-            <ul className="mt-4 space-y-2.5">
-              {[
-                { t: "Revisar caducidades góndola A", p: "Urgente" },
-                { t: "Arqueo de caja turno mañana", p: "Hoy" },
-                { t: "Confirmar pedido pendiente", p: "Hoy" },
-                { t: "Actualizar cartel de guardias", p: "Próximos días" },
-              ].map((x) => (
-                <li key={x.t} className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-[#F7F8FC] px-3 py-2.5">
-                  <CheckCircle2 className="size-4 shrink-0 text-slate-400" />
-                  <p className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">{x.t}</p>
-                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-[#3B6EF5]">{x.p}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <MetricCard label="Ventas netas" value={eur(kpis.ventasNetas)} hint="Tickets del piloto" icon={Wallet} tone="peach" to="/ventas" />
+          <MetricCard label="Compras" value={eur(kpis.compras)} hint={`${kpis.pedidosPendientes} pendientes`} icon={ShoppingCart} tone="lilac" to="/compras" />
+          <MetricCard label="Margen bruto" value={eur(kpis.margenEur)} hint={`${kpis.margenPct.toFixed(1)} %`} icon={TrendingUp} tone="mint" to="/rentabilidad" />
+          <MetricCard label="Alertas stock" value={String(kpis.stockCaducidad + kpis.stockBajo + kpis.stockExceso)} hint={`${kpis.stockCaducidad} cad. · ${kpis.stockBajo} mín. · ${kpis.stockExceso} exceso`} icon={Package} tone="sky" to="/stock" />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-5 sm:p-6">
-            <p className="text-xs font-semibold tracking-wide text-[#3B6EF5] uppercase">Nara · asesora</p>
-            <h3 className="mt-1 font-display text-xl font-semibold text-slate-900">Recomendaciones</h3>
-            <ul className="mt-4 space-y-3 text-sm text-slate-600">
-              <li className="flex gap-2">
-                <Sparkles className="mt-0.5 size-4 shrink-0 text-[#3B6EF5]" />
-                Hay 12 referencias con caducidad en los próximos 90 días.
-              </li>
-              <li className="flex gap-2">
-                <Sparkles className="mt-0.5 size-4 shrink-0 text-[#3B6EF5]" />
-                8 productos están bajo el stock mínimo configurado.
-              </li>
-              <li className="flex gap-2">
-                <Sparkles className="mt-0.5 size-4 shrink-0 text-[#3B6EF5]" />
-                5 tareas del turno siguen abiertas.
-              </li>
-            </ul>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link to="/caducidades" className="inline-flex items-center gap-1 rounded-full bg-[#3B6EF5] px-3 py-1.5 text-xs font-semibold text-white">
-                Ver en NaraGest <ArrowRight className="size-3.5" />
-              </Link>
-              <Link to="/consulta" className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-[#3B6EF5]">
-                Preguntar a Nara
-              </Link>
+          <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+            <h3 className="font-display text-lg font-semibold text-slate-900">Accesos · gestión</h3>
+            <div className="mt-4 grid grid-cols-2 gap-2.5">
+              <ActionTile icon={MessageSquare} label="Asistente Nara" to="/consulta" />
+              <ActionTile icon={Package} label="Stock inteligente" to="/stock" />
+              <ActionTile icon={ShoppingCart} label="Compras" to="/compras" />
+              <ActionTile icon={Wallet} label="Ventas" to="/ventas" />
+              <ActionTile icon={TrendingUp} label="Rentabilidad" to="/rentabilidad" />
+              <ActionTile icon={Lightbulb} label="Ideas y oportunidades" to="/oportunidades" />
+              <ActionTile icon={AlertTriangle} label="Caducidades" to="/caducidades" />
+              <ActionTile icon={Sparkles} label="Informes (CSV en módulos)" to="/rentabilidad" />
             </div>
           </section>
 
           <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
-            <h3 className="font-display text-lg font-semibold text-slate-900">Accesos rápidos · NaraGest</h3>
-            <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <ActionTile icon={MessageSquare} label="Consultar a Nara" to="/consulta" />
-              <ActionTile icon={Package} label="Stock" to="/stock" />
-              <ActionTile icon={Wallet} label="Ventas" to="/ventas" />
-              <ActionTile icon={Bell} label="Caducidades" to="/caducidades" />
-            </div>
+            <h3 className="font-display text-lg font-semibold text-slate-900">Cómo trabaja Nara</h3>
+            <ul className="mt-3 space-y-2 text-sm text-slate-600">
+              <li>· <strong>Inteligencia:</strong> interpreta stock, compras y márgenes, no solo lista datos.</li>
+              <li>· <strong>Proactividad:</strong> las alertas de arriba salen solas al entrar al panel.</li>
+              <li>· <strong>Acción:</strong> cada alerta enlaza al módulo donde puedes actuar.</li>
+              <li>· <strong>Límite:</strong> Nara no lanza pedidos ni altera el ERP sin tu autorización.</li>
+            </ul>
+            <p className="mt-4 text-xs text-slate-400">
+              Si importas CSV en Stock o das de alta compras/ventas/márgenes, este panel se actualiza al recargar.
+            </p>
           </section>
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function ToneBadge({ tone }: { tone: Insight["tone"] }) {
+  const map = {
+    urgente: "bg-red-50 text-red-700",
+    atencion: "bg-amber-50 text-amber-800",
+    oportunidad: "bg-emerald-50 text-emerald-800",
+    ok: "bg-slate-100 text-slate-600",
+  };
+  const label = {
+    urgente: "Urgente",
+    atencion: "Atención",
+    oportunidad: "Oportunidad",
+    ok: "OK",
+  };
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${map[tone]}`}>
+      {label[tone]}
+    </span>
   );
 }
 
@@ -170,7 +198,6 @@ function MetricCard({
   icon: Icon,
   tone,
   to,
-  delta,
 }: {
   label: string;
   value: string;
@@ -178,7 +205,6 @@ function MetricCard({
   icon: typeof MessageSquare;
   tone: "peach" | "lilac" | "sky" | "mint";
   to: string;
-  delta?: string;
 }) {
   const tones = {
     peach: "bg-[#FFF4E8] border-[#F5E0C8]",
@@ -192,8 +218,7 @@ function MetricCard({
         <p className="text-[11px] font-medium text-slate-500 sm:text-xs">{label}</p>
         <Icon className="size-4 text-slate-400" />
       </div>
-      <p className="mt-1 font-display text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
-      {delta ? <p className="mt-0.5 text-[11px] font-medium text-emerald-600">{delta}</p> : null}
+      <p className="mt-1 font-display text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{value}</p>
       <p className="mt-0.5 text-[11px] text-slate-400">{hint}</p>
     </Link>
   );
