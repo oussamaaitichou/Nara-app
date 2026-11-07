@@ -1,9 +1,10 @@
 import { getSql } from "@/lib/db";
+import type { PerfilAcceso, PlanAcceso } from "./planes";
+import { normalizarPerfil, normalizarPlan } from "./planes";
 import { generarCodigo, hashCodigo } from "./sesion.server";
 
 let listo: Promise<void> | null = null;
 
-/** Crea las tablas del piloto si no existen (idempotente: vale en cada arranque, con cualquier Postgres). */
 function asegurarEsquema(): Promise<void> {
   listo ??= (async () => {
     const sql = await getSql();
@@ -19,7 +20,9 @@ function asegurarEsquema(): Promise<void> {
     )`);
     await sql.query(`alter table piloto_codigos add column if not exists generacion integer not null default 1`);
     await sql.query(`alter table piloto_codigos add column if not exists plan text not null default 'gest'`);
+    await sql.query(`alter table piloto_codigos add column if not exists perfil text not null default 'farmacia'`);
     await sql.query(`update piloto_codigos set plan = 'gest' where plan is null or plan not in ('chat','gest')`);
+    await sql.query(`update piloto_codigos set perfil = 'farmacia' where perfil is null or perfil not in ('farmacia','asesoria','farmaceutico','tecnico','estudiante','otro')`);
     await sql.query(`create table if not exists piloto_uso (
       codigo_id integer not null references piloto_codigos(id) on delete cascade,
       dia date not null,
@@ -64,7 +67,6 @@ async function db() {
   return getSql();
 }
 
-/** Día actual en España (YYYY-MM-DD): los límites diarios se reinician a medianoche hora de Madrid. */
 export function diaMadrid(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid" }).format(new Date());
 }
@@ -74,7 +76,8 @@ export type CodigoFila = {
   etiqueta: string;
   pista: string;
   limite_diario: number;
-  plan: "chat" | "gest";
+  plan: PlanAcceso;
+  perfil: PerfilAcceso;
   activo: boolean;
   creado: string;
   ultimo_uso: string | null;
@@ -98,14 +101,16 @@ export type ValoracionFila = {
 export async function crearCodigo(
   etiqueta: string,
   limite: number,
-  plan: "chat" | "gest" = "gest",
+  plan: PlanAcceso = "gest",
+  perfil: PerfilAcceso = "farmacia",
 ): Promise<{ id: number; codigo: string }> {
   const sql = await db();
   const codigo = generarCodigo();
-  const planSafe = plan === "chat" ? "chat" : "gest";
+  const planSafe = normalizarPlan(plan);
+  const perfilSafe = normalizarPerfil(perfil);
   const rows = await sql<{ id: number }>`
-    insert into piloto_codigos (etiqueta, codigo_hash, pista, limite_diario, plan)
-    values (${etiqueta}, ${hashCodigo(codigo)}, ${codigo.slice(-4)}, ${limite}, ${planSafe})
+    insert into piloto_codigos (etiqueta, codigo_hash, pista, limite_diario, plan, perfil)
+    values (${etiqueta}, ${hashCodigo(codigo)}, ${codigo.slice(-4)}, ${limite}, ${planSafe}, ${perfilSafe})
     returning id`;
   return { id: rows[0]!.id, codigo };
 }
@@ -121,14 +126,14 @@ export async function regenerarCodigo(id: number): Promise<string | null> {
 
 export async function buscarCodigo(
   texto: string,
-): Promise<{ id: number; etiqueta: string; activo: boolean; generacion: number; plan: "chat" | "gest" } | null> {
+): Promise<{ id: number; etiqueta: string; activo: boolean; generacion: number; plan: PlanAcceso; perfil: PerfilAcceso } | null> {
   const sql = await db();
-  const rows = await sql<{ id: number; etiqueta: string; activo: boolean; generacion: number; plan: string }>`
-    select id, etiqueta, activo, generacion, coalesce(plan, 'gest') as plan
+  const rows = await sql<{ id: number; etiqueta: string; activo: boolean; generacion: number; plan: string; perfil: string }>`
+    select id, etiqueta, activo, generacion, coalesce(plan, 'gest') as plan, coalesce(perfil, 'farmacia') as perfil
     from piloto_codigos where codigo_hash = ${hashCodigo(texto)}`;
   const r = rows[0];
   if (!r) return null;
-  return { ...r, plan: r.plan === "chat" ? "chat" : "gest" };
+  return { ...r, plan: normalizarPlan(r.plan), perfil: normalizarPerfil(r.perfil) };
 }
 
 export async function estadoUso(id: number) {
@@ -140,20 +145,24 @@ export async function estadoUso(id: number) {
     generacion: number;
     consultas: number;
     plan: string;
+    perfil: string;
   }>`
     select c.etiqueta, c.limite_diario, c.activo, c.generacion, coalesce(u.consultas, 0) as consultas,
-      coalesce(c.plan, 'gest') as plan
+      coalesce(c.plan, 'gest') as plan, coalesce(c.perfil, 'farmacia') as perfil
     from piloto_codigos c
     left join piloto_uso u on u.codigo_id = c.id and u.dia = ${diaMadrid()}::date
     where c.id = ${id}`;
   const r = rows[0];
   if (!r) return null;
-  return { ...r, plan: (r.plan === "chat" ? "chat" : "gest") as "chat" | "gest" };
+  return {
+    ...r,
+    plan: normalizarPlan(r.plan),
+    perfil: normalizarPerfil(r.perfil),
+  };
 }
 
 export type Consumo = { ok: true; restantes: number; limite: number } | { ok: false; motivo: "inactivo" | "limite"; limite: number };
 
-/** Descuenta una consulta de forma atómica; si se ha llegado al límite diario, no descuenta. */
 export async function consumirConsulta(id: number, generacion: number): Promise<Consumo> {
   const sql = await db();
   const rows = await sql<{ limite: number | null; consultas: number | null }>`
@@ -173,7 +182,6 @@ export async function consumirConsulta(id: number, generacion: number): Promise<
   return { ok: true, restantes: Math.max(0, r.limite - r.consultas), limite: r.limite };
 }
 
-/** Si la IA falla, no se le cobra la consulta al usuario. */
 export async function devolverConsulta(id: number): Promise<void> {
   const sql = await db();
   await sql`update piloto_uso set consultas = greatest(consultas - 1, 0) where codigo_id = ${id} and dia = ${diaMadrid()}::date`;
@@ -181,26 +189,48 @@ export async function devolverConsulta(id: number): Promise<void> {
 
 export async function listarCodigos(): Promise<CodigoFila[]> {
   const sql = await db();
-  return sql<CodigoFila>`
+  const rows = await sql<{
+    id: number;
+    etiqueta: string;
+    pista: string;
+    limite_diario: number;
+    plan: string;
+    perfil: string;
+    activo: boolean;
+    creado: string;
+    ultimo_uso: string | null;
+    hoy: number;
+    valoraciones: number;
+  }>`
     select c.id, c.etiqueta, c.pista, c.limite_diario, coalesce(c.plan, 'gest') as plan,
+      coalesce(c.perfil, 'farmacia') as perfil,
       c.activo, c.creado, c.ultimo_uso,
       coalesce(u.consultas, 0) as hoy,
       (select count(*) from piloto_valoraciones v where v.codigo_id = c.id) as valoraciones
     from piloto_codigos c
     left join piloto_uso u on u.codigo_id = c.id and u.dia = ${diaMadrid()}::date
     order by c.creado desc`;
+  return rows.map((r) => ({
+    ...r,
+    plan: normalizarPlan(r.plan),
+    perfil: normalizarPerfil(r.perfil),
+  }));
 }
 
 export async function actualizarCodigo(
   id: number,
-  campos: { activo?: boolean; limite?: number; plan?: "chat" | "gest" },
+  campos: { activo?: boolean; limite?: number; plan?: PlanAcceso; perfil?: PerfilAcceso },
 ): Promise<void> {
   const sql = await db();
   if (campos.activo !== undefined) await sql`update piloto_codigos set activo = ${campos.activo} where id = ${id}`;
   if (campos.limite !== undefined) await sql`update piloto_codigos set limite_diario = ${campos.limite} where id = ${id}`;
   if (campos.plan !== undefined) {
-    const plan = campos.plan === "chat" ? "chat" : "gest";
+    const plan = normalizarPlan(campos.plan);
     await sql`update piloto_codigos set plan = ${plan} where id = ${id}`;
+  }
+  if (campos.perfil !== undefined) {
+    const perfil = normalizarPerfil(campos.perfil);
+    await sql`update piloto_codigos set perfil = ${perfil} where id = ${id}`;
   }
 }
 
@@ -242,8 +272,6 @@ export async function contarPendientes(): Promise<number> {
   return rows[0]?.n ?? 0;
 }
 
-// ---------- Solicitudes de informe y acompañamiento
-
 export type SolicitudFila = {
   id: number;
   creado: string;
@@ -278,7 +306,6 @@ export async function crearSolicitud(s: {
   return rows[0]!.id;
 }
 
-/** Para frenar abusos: solicitudes del mismo correo y totales en las últimas 24 horas. */
 export async function contarSolicitudesRecientes(email: string): Promise<{ porEmail: number; total: number }> {
   const sql = await db();
   const rows = await sql<{ por_email: number; total: number }>`
