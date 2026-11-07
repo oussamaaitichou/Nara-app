@@ -11,6 +11,7 @@ import {
 } from "@/lib/erp/db.server";
 import { PLANES } from "@/lib/erp/planes";
 import { CEREBRO, ESTILO, formatContext, formatSources, retrieve } from "@/lib/knowledge";
+import { verificarPlanErp, textoAvisoCaducidad } from "@/lib/planes/verificar.server";
 import { archivosActivos } from "@/lib/piloto/config.server";
 
 const MAX_TEXTO = 4000;
@@ -21,8 +22,8 @@ const MANTENER = 8; // mensajes recientes que se conservan completos
 const SISTEMA_RESUMEN = `Resume la conversación que se te da, para que quien la continúe no pierda el hilo. Escribe en español, en un máximo de 350 palabras: los datos y cifras mencionados, las decisiones tomadas, los documentos comentados y las dudas pendientes. Conserva exactamente las cifras, fechas y nombres de normas. No añadas nada que no esté en la conversación.`;
 const hora = (d: Date) => new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" }).format(d);
 
-async function cuota(u: UsuarioCtx) {
-  const limite = PLANES[u.plan].archivos12h;
+async function cuota(u: UsuarioCtx, archivos12h?: number) {
+  const limite = archivos12h ?? PLANES[u.plan].archivos12h;
   const { usados, masAntiguo } = await archivosUsados(u.id);
   const liberaA = masAntiguo ? new Date(new Date(masAntiguo).getTime() + 12 * 3600 * 1000) : null;
   return { limite, usados, restantes: Math.max(0, limite - usados), liberaA };
@@ -59,8 +60,20 @@ export const Route = createFileRoute("/api/erp-chat")({
           const url = new URL(request.url);
           const r = url.searchParams.get("r");
           if (r === "config") {
-            const c = await cuota(u);
-            return json({ plan: u.plan, archivos: archivosActivos(), limite: c.limite, usados: c.usados, restantes: c.restantes, liberaA: c.liberaA?.toISOString() ?? null });
+            const plan = await verificarPlanErp(u);
+            const archivos12h = plan.ok ? plan.archivos12h : PLANES[u.plan].archivos12h;
+            const c = await cuota(u, archivos12h);
+            const aviso = plan.ok ? textoAvisoCaducidad(plan.diasRestantes) : null;
+            return json({
+              plan: plan.ok ? plan.planId : u.plan,
+              archivos: archivosActivos(),
+              limite: c.limite,
+              usados: c.usados,
+              restantes: c.restantes,
+              liberaA: c.liberaA?.toISOString() ?? null,
+              diasRestantes: plan.ok ? plan.diasRestantes : null,
+              avisoCaducidad: aviso,
+            });
           }
           if (r === "conversaciones") return json({ conversaciones: await listarConversaciones(u.id) });
           if (r === "conversacion") {
@@ -105,22 +118,27 @@ export const Route = createFileRoute("/api/erp-chat")({
           }
           if (b.accion !== "enviar") return json({ error: "Acción no válida." }, 400);
 
+          // --- Filtro de plan (antes de Gemini) ---
+          const usadosHoy = await mensajesHoy(u.id);
+          const plan = await verificarPlanErp(u, { comprobarMensajes: true, mensajesUsadosHoy: usadosHoy });
+          if (!plan.ok) {
+            const status = plan.motivo === "limite_mensajes" ? 429 : 403;
+            return json({ error: plan.mensaje, motivo: plan.motivo }, status);
+          }
+
           const texto = txt(b.texto, MAX_TEXTO);
           const hayArchivos = Array.isArray(b.adjuntos) && b.adjuntos.length > 0;
           if (!texto && !hayArchivos) return json({ error: "Escribe tu consulta." }, 400);
-          if ((await mensajesHoy(u.id)) >= PLANES[u.plan].mensajesDia) {
-            return json({ error: "Has alcanzado el límite técnico de mensajes de hoy. Mañana podrás seguir." }, 429);
-          }
 
           let adjuntos: Awaited<ReturnType<typeof procesarAdjuntos>> = { ok: true, items: [] };
           if (hayArchivos) {
             if (!archivosActivos()) return json({ error: "La subida de archivos todavía no está disponible." }, 403);
             adjuntos = await procesarAdjuntos(b.adjuntos);
             if (!adjuntos.ok) return json({ error: adjuntos.error }, 400);
-            const c = await cuota(u);
+            const c = await cuota(u, plan.archivos12h);
             if (adjuntos.items.length > c.restantes) {
               const cuando = c.liberaA ? ` Podrás subir más a partir de las ${hora(c.liberaA)}.` : "";
-              return json({ error: `Has alcanzado el límite de ${c.limite} archivos cada 12 horas del plan ${u.plan}.${cuando}` }, 429);
+              return json({ error: `Has alcanzado el límite de ${c.limite} archivos cada 12 horas del plan ${plan.planId}.${cuando}` }, 429);
             }
           }
           const items = adjuntos.ok ? adjuntos.items : [];
@@ -134,8 +152,9 @@ export const Route = createFileRoute("/api/erp-chat")({
 
           let previos = conv ? await mensajesDesde(conv.id, conv.resumido_hasta, 400) : [];
           let memoria = conv?.resumen ?? "";
-          // Premium: la conversación no tiene fin. Cuando lo antiguo es muy largo, se resume y se conserva el hilo.
-          if (conv && u.plan === "premium" && previos.length > MANTENER + 2 && previos.reduce((n, m) => n + m.contenido.length, 0) > UMBRAL_RESUMEN) {
+          // Premium / plan con límites altos: la conversación no tiene fin. Cuando lo antiguo es muy largo, se resume.
+          const esPremium = plan.planId === "premium" || plan.planId === "medida" || u.plan === "premium";
+          if (conv && esPremium && previos.length > MANTENER + 2 && previos.reduce((n, m) => n + m.contenido.length, 0) > UMBRAL_RESUMEN) {
             const corte = previos.length - MANTENER;
             const nuevo = await resumir(memoria, previos.slice(0, corte));
             if (nuevo) {
@@ -182,7 +201,7 @@ export const Route = createFileRoute("/api/erp-chat")({
           const found = retrieve(consulta);
           const clasificacion = clasificar(consulta);
           const systemPrompt = construirPrompt({ cerebro: CEREBRO, estilo: ESTILO, clasificacion, contexto: formatContext(found), fecha: fechaHoy(), adjuntos: archivosActivos(), memoria });
-          console.log("[chat-log]", JSON.stringify({ riesgo: clasificacion.riesgo, temas: clasificacion.temas, docs: found.map((c) => c.id), erp: u.id, archivos: items.length }));
+          console.log("[chat-log]", JSON.stringify({ riesgo: clasificacion.riesgo, temas: clasificacion.temas, docs: found.map((c) => c.id), erp: u.id, archivos: items.length, plan: plan.planId }));
 
           const r = await llamarIA(systemPrompt, mensajes);
           if (!r.ok) return json({ error: r.mensaje }, r.status);
@@ -194,7 +213,7 @@ export const Route = createFileRoute("/api/erp-chat")({
           const sources = formatSources(found);
           return new Response(
             flujoSSE(r.upstream, {
-              inicio: [JSON.stringify({ conv: convId, titulo: conv ? conv.titulo : titulo })],
+              inicio: [JSON.stringify({ conv: convId, titulo: conv ? conv.titulo : titulo, avisoCaducidad: textoAvisoCaducidad(plan.diasRestantes) })],
               final: sources || undefined,
               alTerminar: async (t) => {
                 if (t.trim()) await guardarMensaje(convId, "assistant", t + sources, null);
