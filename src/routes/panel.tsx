@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
+import { questionForInsight } from "@/lib/naragest/chat-context";
 import { buildDashboardInsights, type Insight } from "@/lib/naragest/insights";
 
 export const Route = createFileRoute("/panel")({
@@ -82,6 +83,7 @@ function NaraGestHome() {
               </Link>
               <Link
                 to="/consulta"
+                search={{ q: "¿Cómo está funcionando mi farmacia según NaraGest?" }}
                 className="inline-flex h-10 items-center gap-2 rounded-full bg-[#3B6EF5] px-4 text-sm font-semibold text-white shadow-sm shadow-blue-500/20"
               >
                 <Sparkles className="size-4" /> Preguntar a Nara
@@ -90,23 +92,17 @@ function NaraGestHome() {
           </div>
         </section>
 
-        {/* FarmaIA: Tu IA ha detectado esto */}
         <section className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-white p-5 shadow-sm sm:p-6">
           <div className="flex items-center gap-2">
             <Sparkles className="size-5 text-[#3B6EF5]" />
-            <h3 className="font-display text-lg font-semibold text-slate-900">
-              Nara ha detectado esto hoy
-            </h3>
+            <h3 className="font-display text-lg font-semibold text-slate-900">Nara ha detectado esto hoy</h3>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Conclusiones con reglas transparentes sobre stock, compras, ventas y márgenes. No sustituyen el criterio profesional.
+            Conclusiones con reglas transparentes. Actúa en el módulo o pide a Nara un plan de acción.
           </p>
           <ul className="mt-4 space-y-3">
             {insights.map((ins) => (
-              <li
-                key={ins.id}
-                className="rounded-2xl border border-slate-100 bg-white/90 p-4 shadow-sm"
-              >
+              <li key={ins.id} className="rounded-2xl border border-slate-100 bg-white/90 p-4 shadow-sm">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -114,17 +110,24 @@ function NaraGestHome() {
                       <p className="font-semibold text-slate-900">{ins.title}</p>
                     </div>
                     <p className="mt-1.5 text-sm text-slate-600">{ins.body}</p>
-                    {ins.impact ? (
-                      <p className="mt-1 text-xs font-medium text-slate-800">{ins.impact}</p>
-                    ) : null}
+                    {ins.impact ? <p className="mt-1 text-xs font-medium text-slate-800">{ins.impact}</p> : null}
                     <p className="mt-1 text-[10px] text-slate-400">Fuente: {ins.source}</p>
                   </div>
-                  <Link
-                    to={ins.href}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#3B6EF5] px-3 py-1.5 text-xs font-semibold text-white"
-                  >
-                    {ins.cta} <ArrowRight className="size-3.5" />
-                  </Link>
+                  <div className="flex shrink-0 flex-col gap-1.5 sm:items-end">
+                    <Link
+                      to={ins.href}
+                      className="inline-flex items-center gap-1 rounded-full bg-[#3B6EF5] px-3 py-1.5 text-xs font-semibold text-white"
+                    >
+                      {ins.cta} <ArrowRight className="size-3.5" />
+                    </Link>
+                    <Link
+                      to="/consulta"
+                      search={{ q: questionForInsight(ins) }}
+                      className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-[#3B6EF5]"
+                    >
+                      <MessageSquare className="size-3.5" /> Preguntar a Nara
+                    </Link>
+                  </div>
                 </div>
               </li>
             ))}
@@ -158,11 +161,11 @@ function NaraGestHome() {
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
               <li>· <strong>Inteligencia:</strong> interpreta stock, compras y márgenes, no solo lista datos.</li>
               <li>· <strong>Proactividad:</strong> las alertas de arriba salen solas al entrar al panel.</li>
-              <li>· <strong>Acción:</strong> cada alerta enlaza al módulo donde puedes actuar.</li>
+              <li>· <strong>Acción:</strong> cada alerta enlaza al módulo o abre el chat con contexto.</li>
               <li>· <strong>Límite:</strong> Nara no lanza pedidos ni altera el ERP sin tu autorización.</li>
             </ul>
             <p className="mt-4 text-xs text-slate-400">
-              Si importas CSV en Stock o das de alta compras/ventas/márgenes, este panel se actualiza al recargar.
+              Si importas CSV en Stock o das de alta compras/ventas/márgenes, este panel y el chat usan esos datos al recargar.
             </p>
           </section>
         </div>
@@ -178,12 +181,7 @@ function ToneBadge({ tone }: { tone: Insight["tone"] }) {
     oportunidad: "bg-emerald-50 text-emerald-800",
     ok: "bg-slate-100 text-slate-600",
   };
-  const label = {
-    urgente: "Urgente",
-    atencion: "Atención",
-    oportunidad: "Oportunidad",
-    ok: "OK",
-  };
+  const label = { urgente: "Urgente", atencion: "Atención", oportunidad: "Oportunidad", ok: "OK" };
   return (
     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${map[tone]}`}>
       {label[tone]}
