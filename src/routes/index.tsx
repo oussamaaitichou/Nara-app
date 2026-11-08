@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -38,7 +39,6 @@ function Home() {
 function Hero() {
   return (
     <section className="relative overflow-hidden pt-24 pb-16 sm:pt-28 sm:pb-20">
-      {/* Fondo tipo NaraGest */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-24 left-1/2 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-[#3B6EF5]/15 blur-3xl" />
         <div className="absolute top-40 right-0 h-64 w-64 rounded-full bg-sky-200/40 blur-3xl" />
@@ -62,13 +62,13 @@ function Hero() {
           <h1 className="mt-6 font-display text-[2.35rem] font-semibold tracking-tight text-slate-900 sm:text-5xl sm:leading-[1.08]">
             Una sola plataforma.
             <span className="block bg-gradient-to-r from-[#3B6EF5] via-sky-500 to-emerald-500 bg-clip-text text-transparent">
-              Criterio y gestión.
+              Criterio y gestion.
             </span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-500 sm:text-lg">
-            <strong className="text-slate-800">Nara</strong> te orienta en el mostrador.
-            <strong className="text-slate-800"> NaraGest</strong> concentra stock, compras, ventas y
-            rentabilidad — con alertas claras y acción.
+            <strong className="text-slate-800">Nara</strong> te orienta en el mostrador.{" "}
+            <strong className="text-slate-800">NaraGest</strong> concentra stock, compras, ventas y
+            rentabilidad — con alertas claras y accion.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button
@@ -99,7 +99,6 @@ function Hero() {
   );
 }
 
-/** Centro: Nara | NaraGest con resumen y efectos */
 function DualProducts() {
   return (
     <section id="productos" className="relative pb-8 sm:pb-12">
@@ -112,7 +111,6 @@ function DualProducts() {
         </div>
 
         <div className="relative grid gap-5 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">
-          {/* Nara */}
           <article className="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm transition duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/10 sm:p-8">
             <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-[#3B6EF5]/10 blur-2xl transition group-hover:bg-[#3B6EF5]/20" />
             <div className="relative">
@@ -126,12 +124,12 @@ function DualProducts() {
                 </div>
               </div>
               <p className="mt-5 text-sm leading-relaxed text-slate-600">
-                Responde dudas de recetas, genéricos, estupefacientes, inspección y servicios en lenguaje de
-                turno. Primero el criterio; después la norma.
+                Responde dudas de recetas, genericos, estupefacientes, inspeccion y servicios en lenguaje de
+                turno. Primero el criterio; despues la norma.
               </p>
               <ul className="mt-5 space-y-2.5 text-sm text-slate-600">
-                <Li>Orientación legal y de dispensación al momento</Li>
-                <Li>Casos de mostrador, no murales de boletín</Li>
+                <Li>Orientacion legal y de dispensacion al momento</Li>
+                <Li>Casos de mostrador, no murales de boletin</Li>
                 <Li>Complementa tu criterio; no lo sustituye</Li>
               </ul>
               <div className="mt-6">
@@ -145,7 +143,6 @@ function DualProducts() {
             </div>
           </article>
 
-          {/* Conector central */}
           <div className="hidden flex-col items-center justify-center lg:flex">
             <div className="flex size-14 items-center justify-center rounded-full border border-blue-100 bg-white shadow-md shadow-blue-500/10">
               <span className="bg-gradient-to-br from-[#3B6EF5] to-emerald-500 bg-clip-text text-lg font-bold text-transparent">
@@ -155,7 +152,6 @@ function DualProducts() {
             <div className="mt-2 h-16 w-px bg-gradient-to-b from-blue-200 to-emerald-200" />
           </div>
 
-          {/* NaraGest */}
           <article className="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm transition duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/10 sm:p-8">
             <div className="pointer-events-none absolute -left-10 -top-10 size-40 rounded-full bg-emerald-400/15 blur-2xl transition group-hover:bg-emerald-400/25" />
             <div className="relative">
@@ -165,7 +161,7 @@ function DualProducts() {
                 </span>
                 <div>
                   <h3 className="font-display text-2xl font-semibold tracking-tight text-slate-900">NaraGest</h3>
-                  <p className="text-xs font-medium text-emerald-600">Gestión inteligente</p>
+                  <p className="text-xs font-medium text-emerald-600">Gestion inteligente</p>
                 </div>
               </div>
               <p className="mt-5 text-sm leading-relaxed text-slate-600">
@@ -175,7 +171,7 @@ function DualProducts() {
               <ul className="mt-5 space-y-2.5 text-sm text-slate-600">
                 <Li>KPIs y alertas al entrar al panel</Li>
                 <Li>Stock, compras, ventas y rentabilidad</Li>
-                <Li>Cada alerta enlaza al módulo o al chat con contexto</Li>
+                <Li>Cada alerta enlaza al modulo o al chat con contexto</Li>
               </ul>
               <div className="mt-6">
                 <a
@@ -190,15 +186,16 @@ function DualProducts() {
         </div>
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-slate-500">
-          En <strong className="text-slate-700">demo</strong> puedes probar <strong className="text-slate-700">chat + NaraGest</strong>.
-          Luego contratas solo chat, o gest (que incluye el asistente).
+          En <strong className="text-slate-700">demo</strong> puedes probar{" "}
+          <strong className="text-slate-700">chat + NaraGest</strong>. Luego contratas solo chat, o gest (que
+          incluye el asistente).
         </p>
       </div>
     </section>
   );
 }
 
-function Li({ children }: { children: React.ReactNode }) {
+function Li({ children }: { children: ReactNode }) {
   return (
     <li className="flex items-start gap-2">
       <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#3B6EF5]" />
@@ -209,7 +206,7 @@ function Li({ children }: { children: React.ReactNode }) {
 
 function GestModules() {
   const mods = [
-    { icon: Package, title: "Stock", body: "Mínimos, exceso y caducidades con priorización.", tone: "sky" },
+    { icon: Package, title: "Stock", body: "Minimos, exceso y caducidades con priorizacion.", tone: "sky" },
     { icon: ShoppingCart, title: "Compras", body: "Pedidos y proveedores sin perder el hilo.", tone: "lilac" },
     { icon: Wallet, title: "Ventas", body: "Tickets y ritmo del mostrador de un vistazo.", tone: "peach" },
     { icon: TrendingUp, title: "Rentabilidad", body: "Margen y focos de mejora accionables.", tone: "mint" },
@@ -230,10 +227,10 @@ function GestModules() {
         <div className="max-w-2xl">
           <p className="text-xs font-semibold tracking-wide text-[#3B6EF5] uppercase">NaraGest en detalle</p>
           <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-            Qué hace el panel de gestión
+            Que hace el panel de gestion
           </h2>
           <p className="mt-3 text-slate-500">
-            Mismos módulos que en NaraGest: cifras claras, tarjetas suaves y acceso directo a la acción.
+            Mismos modulos que en NaraGest: cifras claras, tarjetas suaves y acceso directo a la accion.
           </p>
         </div>
         <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -270,7 +267,7 @@ function CtaBand() {
               Prueba Nara y NaraGest en tu farmacia
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-blue-50 sm:text-base">
-              Solicita una demo: acceso temporal a chat y gestión. Tú decides después si te quedas solo con
+              Solicita una demo: acceso temporal a chat y gestion. Tu decides despues si te quedas solo con
               el asistente o con el pack completo.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
