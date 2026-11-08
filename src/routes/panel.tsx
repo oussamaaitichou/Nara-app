@@ -16,9 +16,9 @@ import { questionForInsight } from "@/lib/naragest/chat-context";
 import { buildDashboardInsights, type Insight } from "@/lib/naragest/insights";
 
 export const Route = createFileRoute("/panel")({
-  component: NaraGestHome,
+  component: NaraHome,
   head: () => ({
-    meta: [{ title: "NaraGest — Dashboard inteligente" }],
+    meta: [{ title: "Nara · Gestión — Qué hacer hoy" }],
   }),
 });
 
@@ -37,7 +37,7 @@ function consultaHref(q: string) {
   return `/consulta?q=${encodeURIComponent(q)}`;
 }
 
-function NaraGestHome() {
+function NaraHome() {
   const fecha = new Date().toLocaleDateString("es-ES", {
     weekday: "long",
     day: "numeric",
@@ -63,7 +63,7 @@ function NaraGestHome() {
   }, []);
 
   return (
-    <AppShell title="NaraGest" subtitle="Dashboard inteligente · qué pasa y qué hacer">
+    <AppShell title="Nara · Gestión" subtitle="Qué pasa y qué hacer hoy · stock, compras, margen">
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -73,9 +73,8 @@ function NaraGestHome() {
                 {saludo()}. Tu farmacia de un vistazo.
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
-                <strong className="text-slate-800">Nara</strong> interpreta y recomienda.{" "}
-                <strong className="text-slate-800">NaraGest</strong> concentra stock, compras, ventas y rentabilidad.
-                Las cifras sensibles las valida siempre el titular.
+                <strong className="text-slate-800">Nara</strong> interpreta los datos y te propone un plan de
+                acción. Las cifras sensibles las valida siempre el titular.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -86,7 +85,7 @@ function NaraGestHome() {
                 <Lightbulb className="size-4 text-amber-500" /> Ideas
               </Link>
               <a
-                href={consultaHref("¿Cómo está funcionando mi farmacia según NaraGest?")}
+                href={consultaHref("¿Cómo está funcionando mi farmacia según Nara hoy?")}
                 className="inline-flex h-10 items-center gap-2 rounded-full bg-[#3B6EF5] px-4 text-sm font-semibold text-white shadow-sm shadow-blue-500/20"
               >
                 <Sparkles className="size-4" /> Preguntar a Nara
@@ -101,12 +100,12 @@ function NaraGestHome() {
             <h3 className="font-display text-lg font-semibold text-slate-900">Nara ha detectado esto hoy</h3>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Conclusiones con reglas transparentes. Actúa en el módulo o pide a Nara un plan de acción.
+            Hasta 5 alertas prioritarias, cada una con plan de acción. Actúa en el módulo o pide a Nara el detalle.
           </p>
           <ul className="mt-4 space-y-3">
             {insights.map((ins) => (
               <li key={ins.id} className="rounded-2xl border border-slate-100 bg-white/90 p-4 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <ToneBadge tone={ins.tone} />
@@ -114,7 +113,19 @@ function NaraGestHome() {
                     </div>
                     <p className="mt-1.5 text-sm text-slate-600">{ins.body}</p>
                     {ins.impact ? <p className="mt-1 text-xs font-medium text-slate-800">{ins.impact}</p> : null}
-                    <p className="mt-1 text-[10px] text-slate-400">Fuente: {ins.source}</p>
+                    {ins.actionPlan && ins.actionPlan.length > 0 ? (
+                      <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+                        <p className="text-[11px] font-semibold tracking-wide text-[#3B6EF5] uppercase">
+                          Plan de acción
+                        </p>
+                        <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-sm text-slate-700">
+                          {ins.actionPlan.map((step, i) => (
+                            <li key={i}>{step}</li>
+                          ))}
+                        </ol>
+                      </div>
+                    ) : null}
+                    <p className="mt-2 text-[10px] text-slate-400">Fuente: {ins.source}</p>
                   </div>
                   <div className="flex shrink-0 flex-col gap-1.5 sm:items-end">
                     <Link
@@ -145,16 +156,16 @@ function NaraGestHome() {
 
         <div className="grid gap-4 lg:grid-cols-2">
           <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
-            <h3 className="font-display text-lg font-semibold text-slate-900">Accesos · gestión</h3>
+            <h3 className="font-display text-lg font-semibold text-slate-900">Accesos · Nara</h3>
             <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <ActionTile icon={MessageSquare} label="Asistente Nara" to="/consulta" />
-              <ActionTile icon={Package} label="Stock inteligente" to="/stock" />
+              <ActionTile icon={MessageSquare} label="Consultar a Nara" to="/consulta" />
+              <ActionTile icon={Package} label="Stock" to="/stock" />
               <ActionTile icon={ShoppingCart} label="Compras" to="/compras" />
               <ActionTile icon={Wallet} label="Ventas" to="/ventas" />
               <ActionTile icon={TrendingUp} label="Rentabilidad" to="/rentabilidad" />
-              <ActionTile icon={Lightbulb} label="Ideas y oportunidades" to="/oportunidades" />
+              <ActionTile icon={Lightbulb} label="Ideas" to="/oportunidades" />
               <ActionTile icon={AlertTriangle} label="Caducidades" to="/caducidades" />
-              <ActionTile icon={Sparkles} label="Informes (CSV en módulos)" to="/rentabilidad" />
+              <ActionTile icon={Sparkles} label="Informes" to="/rentabilidad" />
             </div>
           </section>
 
@@ -162,12 +173,13 @@ function NaraGestHome() {
             <h3 className="font-display text-lg font-semibold text-slate-900">Cómo trabaja Nara</h3>
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
               <li>· <strong>Inteligencia:</strong> interpreta stock, compras y márgenes, no solo lista datos.</li>
-              <li>· <strong>Proactividad:</strong> las alertas de arriba salen solas al entrar al panel.</li>
-              <li>· <strong>Acción:</strong> cada alerta enlaza al módulo o abre el chat con contexto.</li>
+              <li>· <strong>Plan de acción:</strong> cada alerta trae 2–3 pasos concretos para hoy.</li>
+              <li>· <strong>Acción:</strong> enlaza al módulo o abre el chat con contexto.</li>
               <li>· <strong>Límite:</strong> Nara no lanza pedidos ni altera el ERP sin tu autorización.</li>
             </ul>
             <p className="mt-4 text-xs text-slate-400">
-              Si importas CSV en Stock o das de alta compras/ventas/márgenes, este panel y el chat usan esos datos al recargar.
+              Si importas CSV en Stock o das de alta compras/ventas/márgenes, este panel y el chat usan esos datos al
+              recargar.
             </p>
           </section>
         </div>

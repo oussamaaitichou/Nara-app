@@ -1,4 +1,4 @@
-/** Texto de contexto NaraGest para inyectar en el chat de Nara. */
+/** Texto de contexto Nara · Gestión para inyectar en el chat. */
 
 import { buildDashboardInsights } from "./insights";
 
@@ -6,11 +6,6 @@ function eur(n: number) {
   return n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
 }
 
-/**
- * Resumen operativo del piloto (stock + compras/ventas/márgenes).
- * En el navegador usa localStorage; en servidor usa seed.
- * El cliente puede enviarlo en el body del chat para que Nara vea datos reales del piloto.
- */
 export function formatNaragestContext(today: Date = new Date()): string {
   const { insights, kpis } = buildDashboardInsights(today);
   const origen =
@@ -19,7 +14,7 @@ export function formatNaragestContext(today: Date = new Date()): string {
       : "snapshot del servidor (seed de demostración)";
 
   const lines: string[] = [
-    "DATOS NARAGEST (piloto de la farmacia — úsalos solo si la pregunta es sobre el negocio, stock, compras, ventas o rentabilidad de ESTA farmacia)",
+    "DATOS NARA · GESTIÓN (piloto de la farmacia — úsalos solo si la pregunta es sobre el negocio, stock, compras, ventas o rentabilidad de ESTA farmacia)",
     `Origen: ${origen}.`,
     "No son contabilidad oficial ni el ERP de gestión. No los presentes como cifras auditadas.",
     "Si faltan datos, dilo y orienta al módulo correspondiente.",
@@ -35,9 +30,14 @@ export function formatNaragestContext(today: Date = new Date()): string {
   ];
 
   for (const ins of insights) {
+    const plan =
+      ins.actionPlan && ins.actionPlan.length
+        ? ` Plan: ${ins.actionPlan.join(" | ")}.`
+        : "";
     lines.push(
       `- [${ins.tone.toUpperCase()}] ${ins.title}: ${ins.body}` +
         (ins.impact ? ` Impacto: ${ins.impact}.` : "") +
+        plan +
         ` Fuente: ${ins.source}. Módulo: ${ins.href}.`,
     );
   }
@@ -51,12 +51,16 @@ export function formatNaragestContext(today: Date = new Date()): string {
   return lines.join("\n");
 }
 
-/** Pregunta sugerida al abrir el chat desde una alerta del panel. */
 export function questionForInsight(ins: {
   title: string;
   body: string;
   impact?: string;
+  actionPlan?: string[];
 }): string {
   const impact = ins.impact ? ` ${ins.impact}` : "";
-  return `Sobre esta alerta de NaraGest: «${ins.title}». ${ins.body}${impact} ¿Qué debería priorizar y qué pasos concretos me recomiendas?`;
+  const plan =
+    ins.actionPlan && ins.actionPlan.length
+      ? ` Plan sugerido: ${ins.actionPlan.join("; ")}.`
+      : "";
+  return `Sobre esta alerta de Nara: «${ins.title}». ${ins.body}${impact}${plan} ¿Qué debería priorizar y qué pasos concretos me recomiendas?`;
 }
