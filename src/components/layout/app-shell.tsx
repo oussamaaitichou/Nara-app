@@ -39,13 +39,13 @@ export type ShellItem = {
 };
 
 const NAV: ShellItem[] = [
-  { to: "/consulta", label: "Asistente Nara", icon: MessageSquare, match: (p) => p.startsWith("/consulta"), section: "Nara" },
+  { to: "/consulta", label: "Consultar a Nara", icon: MessageSquare, match: (p) => p.startsWith("/consulta"), section: "Nara" },
   { to: "/valorar", label: "Valorar farmacia", icon: Star, match: (p) => p.startsWith("/valorar") },
-  { to: "/panel", label: "Inicio / Dashboard", icon: LayoutDashboard, match: (p) => p === "/panel", section: "NaraGest" },
+  { to: "/panel", label: "Inicio · Gestión", icon: LayoutDashboard, match: (p) => p === "/panel", section: "Gestión" },
   { to: "/stock", label: "Stock e inventario", icon: Package, match: (p) => p.startsWith("/stock") },
   { to: "/compras", label: "Compras y proveedores", icon: ShoppingCart, match: (p) => p.startsWith("/compras") },
   { to: "/ventas", label: "Ventas", icon: Wallet, match: (p) => p.startsWith("/ventas") },
-  { to: "/rentabilidad", label: "Ventas y rentabilidad", icon: TrendingUp, match: (p) => p.startsWith("/rentabilidad") },
+  { to: "/rentabilidad", label: "Rentabilidad", icon: TrendingUp, match: (p) => p.startsWith("/rentabilidad") },
   { to: "/oportunidades", label: "Ideas y oportunidades", icon: Lightbulb, match: (p) => p.startsWith("/oportunidades") },
   { to: "/caducidades", label: "Caducidades", icon: AlertTriangle, match: (p) => p.startsWith("/caducidades") },
   { to: "/caja", label: "Caja y tesorería", icon: BarChart3, match: (p) => p.startsWith("/caja") },
@@ -72,7 +72,7 @@ const MOBILE_TABS = [
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   return (
-    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-3" aria-label="Nara y NaraGest">
+    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-3" aria-label="Nara">
       {NAV.map((item, i) => {
         const active = item.match?.(pathname) ?? pathname === item.to;
         const Icon = item.icon;
@@ -109,7 +109,7 @@ function LogoHome({ onNavigate, compact = false }: { onNavigate?: () => void; co
       to="/panel"
       onClick={onNavigate}
       className="flex min-w-0 items-center gap-2.5 transition hover:opacity-90"
-      aria-label="Nara · abrir NaraGest"
+      aria-label="Nara · inicio"
     >
       <NaraMark className={compact ? "size-8" : "size-9"} />
       <div className="min-w-0">
@@ -117,11 +117,9 @@ function LogoHome({ onNavigate, compact = false }: { onNavigate?: () => void; co
           Nara
         </p>
         {!compact ? (
-          <p className="mt-1 text-[11px] font-medium text-slate-400">
-            <span className="text-slate-200">NaraGest</span> · IA para farmacia
-          </p>
+          <p className="mt-1 text-[11px] font-medium text-slate-400">Consulta y gestión · farmacia</p>
         ) : (
-          <p className="truncate text-[10px] text-slate-500">NaraGest</p>
+          <p className="truncate text-[10px] text-slate-500">Consulta · Gestión</p>
         )}
       </div>
     </Link>
