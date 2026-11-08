@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, KeyRound, Loader2, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import { NaraMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
-import { rutaPorPlan } from "@/lib/erp/login-id.server";
+import { rutaPorPlan } from "@/lib/acceso-plan";
 
 export const Route = createFileRoute("/login")({
   component: AccesoPage,
@@ -73,28 +73,25 @@ function AccesoPage() {
     if (!identificador.trim() || !password || enviando) return;
     setEnviando(true);
     try {
-      const res = await fetch("/api/erp", {
+      const res = await fetch("/api/login-cuenta", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          accion: "login",
           identificador: identificador.trim(),
           password,
         }),
       });
       const json = (await res.json()) as {
         error?: string;
-        usuario?: { nombre?: string };
-        asesoria?: { plan?: string };
         plan?: string;
+        destino?: "/panel" | "/consulta";
       };
       if (!res.ok) {
         setEstado({ fase: "formulario", error: json.error ?? "Identificador o contrasena incorrectos." });
         setEnviando(false);
         return;
       }
-      const plan = json.plan ?? json.asesoria?.plan ?? "gest";
-      void navigate({ to: rutaPorPlan(plan) });
+      void navigate({ to: json.destino ?? rutaPorPlan(json.plan) });
     } catch {
       setEstado({ fase: "formulario", error: "No se ha podido validar el acceso." });
     } finally {
@@ -112,7 +109,7 @@ function AccesoPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ codigo: codigo.trim() }),
       });
-      const json = (await res.json()) as { ok?: boolean; etiqueta?: string; plan?: string; error?: string };
+      const json = (await res.json()) as { ok?: boolean; plan?: string; error?: string };
       if (!res.ok) {
         setEstado({ fase: "formulario", error: json.error ?? "Codigo no valido." });
         setEnviando(false);
@@ -166,7 +163,7 @@ function AccesoPage() {
                 <ShieldCheck className="size-4" /> Acceso abierto
               </p>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                El control por cuenta no esta activado en este entorno. Puedes entrar al panel o al chat.
+                En este entorno puedes entrar al panel o al chat sin cuenta.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -208,8 +205,8 @@ function AccesoPage() {
             {modo === "cuenta" ? (
               <form className="space-y-4" onSubmit={(e) => void entrarCuenta(e)}>
                 <p className="text-sm leading-relaxed text-slate-500">
-                  Usa el <strong className="text-slate-800">nombre o DNI</strong> que te asignaron (va enlazado a tu
-                  correo). Entraras a lo que tengas contratado.
+                  Usa el <strong className="text-slate-800">nombre o DNI</strong> asignado (enlazado a tu correo).
+                  Veras solo lo contratado.
                 </p>
                 <label className="block space-y-1.5">
                   <span className="text-sm font-medium text-slate-700">Identificador</span>
@@ -311,13 +308,11 @@ function AccesoPage() {
                 {estado.limite}
               </p>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button asChild className="flex-1 rounded-full bg-[#3B6EF5] hover:bg-[#2f5cd6]">
-                <Link to={rutaPorPlan(estado.plan)}>
-                  Continuar <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </div>
+            <Button asChild className="w-full rounded-full bg-[#3B6EF5] hover:bg-[#2f5cd6]">
+              <Link to={rutaPorPlan(estado.plan)}>
+                Continuar <ArrowRight className="size-4" />
+              </Link>
+            </Button>
             <button
               type="button"
               onClick={() => void salir()}
