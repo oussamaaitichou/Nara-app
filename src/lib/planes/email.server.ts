@@ -1,11 +1,8 @@
 /**
  * Correo transaccional via Resend.
  * Variables de entorno:
- *   RESEND_API_KEY  - clave de API
- *   EMAIL_FROM      - remitente verificado, p.ej. Nara <noreply@tudominio.com>
- *   APP_URL         - base publica, p.ej. https://nara-farmacias.vercel.app
- *
- * Si faltan, las funciones no fallan: registran en consola y devuelven false.
+ *   RESEND_API_KEY, EMAIL_FROM, APP_URL, ADMIN_EMAIL
+ * Si faltan, no falla: log y return false.
  */
 
 function from(): string | null {
@@ -33,7 +30,7 @@ async function enviar(opts: {
   const key = apiKey();
   const remitente = from();
   if (!key || !remitente) {
-    console.warn("[email] RESEND_API_KEY o EMAIL_FROM no configurados - no se envia:", opts.subject, "->", opts.to);
+    console.warn("[email] RESEND_API_KEY o EMAIL_FROM no configurados:", opts.subject, opts.to);
     return false;
   }
   try {
@@ -63,6 +60,14 @@ async function enviar(opts: {
   }
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "\u0026amp;")
+    .replace(/</g, "\u0026lt;")
+    .replace(/>/g, "\u0026gt;")
+    .replace(/"/g, "\u0026quot;");
+}
+
 export async function emailNuevaSolicitud(s: {
   id: number;
   nombre: string;
@@ -73,19 +78,30 @@ export async function emailNuevaSolicitud(s: {
   const adminTo = process.env.ADMIN_EMAIL?.trim() || from();
   if (!adminTo) return false;
   const subject = `[Nara] Nueva solicitud de demo #${s.id}`;
-  const text = `Nueva solicitud de demo\n\nNombre: ${s.nombre}\nEmail: ${s.email}\nEntidad: ${s.entidad}\nPlan de interes: ${s.plan_interes ?? "-"}\n\nRevisa el panel: ${appUrl()}/admin`;
+  const text = [
+    "Nueva solicitud de demo",
+    "",
+    `Nombre: ${s.nombre}`,
+    `Email: ${s.email}`,
+    `Entidad: ${s.entidad}`,
+    `Plan de interes: ${s.plan_interes ?? "-"}`,
+    "",
+    `Revisa el panel: ${appUrl()}/admin`,
+  ].join("\n");
   return enviar({
     to: adminTo,
     subject,
     text,
-    html: `<p>Nueva solicitud de demo <strong>#${s.id}</strong></p>
-      <ul>
-        <li><strong>Nombre:</strong> ${escapeHtml(s.nombre)}</li>
-        <li><strong>Email:</strong> ${escapeHtml(s.email)}</li>
-        <li><strong>Entidad:</strong> ${escapeHtml(s.entidad)}</li>
-        <li><strong>Plan:</strong> ${escapeHtml(s.plan_interes ?? "-")}</li>
-      </ul>
-      <p><a href="${appUrl()}/admin">Abrir panel de administracion</a></p>`,
+    html: [
+      `<p>Nueva solicitud de demo <strong>#${s.id}</strong></p>`,
+      "<ul>",
+      `<li><strong>Nombre:</strong> ${escapeHtml(s.nombre)}</li>`,
+      `<li><strong>Email:</strong> ${escapeHtml(s.email)}</li>`,
+      `<li><strong>Entidad:</strong> ${escapeHtml(s.entidad)}</li>`,
+      `<li><strong>Plan:</strong> ${escapeHtml(s.plan_interes ?? "-")}</li>`,
+      "</ul>",
+      `<p><a href="${appUrl()}/admin">Abrir panel de administracion</a></p>`,
+    ].join("\n"),
   });
 }
 
@@ -98,16 +114,27 @@ export async function emailInvitacion(opts: {
 }): Promise<boolean> {
   const link = `${appUrl()}/invitar/${opts.token}`;
   const subject = "Tu acceso a Nara esta listo";
-  const text = `Hola ${opts.nombre},\n\nTu acceso a Nara (${opts.planId}, ${opts.dias} dias) esta listo.\n\nEstablece tu contrasena aqui (enlace de un solo uso, valido 72 h):\n${link}\n\nSi no has solicitado esto, ignora este correo.`;
+  const text = [
+    `Hola ${opts.nombre},`,
+    "",
+    `Tu acceso a Nara (${opts.planId}, ${opts.dias} dias) esta listo.`,
+    "",
+    "Establece tu contrasena aqui (enlace de un solo uso, valido 72 h):",
+    link,
+    "",
+    "Si no has solicitado esto, ignora este correo.",
+  ].join("\n");
   return enviar({
     to: opts.to,
     subject,
     text,
-    html: `<p>Hola ${escapeHtml(opts.nombre)},</p>
-      <p>Tu acceso a <strong>Nara</strong> (plan <strong>${escapeHtml(opts.planId)}</strong>, ${opts.dias} dias) esta listo.</p>
-      <p><a href="${link}" style="display:inline-block;padding:10px 16px;background:#1B5C4E;color:#fff;border-radius:6px;text-decoration:none">Establecer mi contrasena</a></p>
-      <p style="color:#666;font-size:13px">El enlace es de un solo uso y caduca en 72 horas.</p>
-      <p style="color:#666;font-size:13px">Si no has solicitado esto, ignora este correo.</p>`,
+    html: [
+      `<p>Hola ${escapeHtml(opts.nombre)},</p>`,
+      `<p>Tu acceso a <strong>Nara</strong> (plan <strong>${escapeHtml(opts.planId)}</strong>, ${opts.dias} dias) esta listo.</p>`,
+      `<p><a href="${link}" style="display:inline-block;padding:10px 16px;background:#1B5C4E;color:#fff;border-radius:6px;text-decoration:none">Establecer mi contrasena</a></p>`,
+      `<p style="color:#666;font-size:13px">El enlace es de un solo uso y caduca en 72 horas.</p>`,
+      `<p style="color:#666;font-size:13px">Si no has solicitado esto, ignora este correo.</p>`,
+    ].join("\n"),
   });
 }
 
@@ -122,23 +149,19 @@ export async function emailAvisoCaducidad(opts: {
       : opts.dias === 1
         ? "Te queda 1 dia de prueba en Nara"
         : `Te quedan ${opts.dias} dias de prueba en Nara`;
-  const text =
+  const cuerpo =
     opts.dias <= 0
-      ? `Hola ${opts.nombre},\n\nTu prueba de Nara ha terminado. Solicita tu plan para seguir usando el chat y el ERP.\n${appUrl()}/solicitar`
-      : `Hola ${opts.nombre},\n\nTe quedan ${opts.dias} dia(s) de prueba en Nara. Si quieres continuar sin interrupciones, solicita tu plan:\n${appUrl()}/solicitar`;
+      ? "Tu prueba de Nara ha terminado. Solicita tu plan para seguir usando el chat y el ERP."
+      : `Te quedan ${opts.dias} dia(s) de prueba en Nara. Si quieres continuar sin interrupciones, solicita tu plan.`;
+  const text = [`Hola ${opts.nombre},`, "", cuerpo, appUrl() + "/solicitar"].join("\n");
   return enviar({
     to: opts.to,
     subject,
     text,
-    html: `<p>Hola ${escapeHtml(opts.nombre)},</p><p>${escapeHtml(text.split("\n\n")[1] ?? text)}</p>
-      <p><a href="${appUrl()}/solicitar">Solicitar plan</a></p>`,
+    html: [
+      `<p>Hola ${escapeHtml(opts.nombre)},</p>`,
+      `<p>${escapeHtml(cuerpo)}</p>`,
+      `<p><a href="${appUrl()}/solicitar">Solicitar plan</a></p>`,
+    ].join("\n"),
   });
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&")
-    .replace(/</g, "<")
-    .replace(/>/g, ">")
-    .replace(/"/g, """);
 }
