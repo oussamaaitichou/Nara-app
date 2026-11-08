@@ -1,6 +1,5 @@
 /**
  * Login por identificador (nombre, email o DNI) enlazado al usuario ERP.
- * Aditivo: no cambia el esquema; busca por email o nombre.
  */
 import { getSql } from "@/lib/db";
 
@@ -17,15 +16,10 @@ export type FilaLogin = {
   plan: string;
 };
 
-/** Normaliza identificador de acceso (sin espacios extremos, lower para comparacion). */
 export function normalizarIdentificador(raw: string): string {
   return raw.trim().replace(/\s+/g, " ");
 }
 
-/**
- * Busca usuario por email exacto (lower) o por nombre exacto (lower).
- * El DNI puede guardarse como nombre/identificador de acceso hasta tener columna dedicada.
- */
 export async function usuarioPorIdentificador(identificador: string): Promise<FilaLogin | null> {
   const id = normalizarIdentificador(identificador);
   if (id.length < 2) return null;
@@ -45,10 +39,4 @@ export async function usuarioPorIdentificador(identificador: string): Promise<Fi
   return rows[0] ?? null;
 }
 
-/** Destino tras login segun plan de la asesoria / codigo. */
-export function rutaPorPlan(plan: string | null | undefined): "/panel" | "/consulta" {
-  const p = (plan ?? "gest").toLowerCase();
-  if (p === "chat") return "/consulta";
-  // gest, demo, premium, gratis con ERP, medida → panel (incluye chat desde ahi)
-  return "/panel";
-}
+export { rutaPorPlan } from "@/lib/acceso-plan";
