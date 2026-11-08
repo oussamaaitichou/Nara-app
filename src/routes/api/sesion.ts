@@ -5,14 +5,19 @@ import { sesionErp } from "@/lib/erp/auth.server";
 import { usuarioCtx } from "@/lib/erp/db.server";
 import { estadoUso } from "@/lib/piloto/db.server";
 
+/** true = hay que estar autenticado. Solo se abre con CONTROL_ACCESO=no|abierto (desarrollo). */
+function debeExigirLogin(): boolean {
+  const v = process.env.CONTROL_ACCESO?.trim().toLowerCase();
+  if (v === "no" || v === "abierto" || v === "off" || v === "0") return false;
+  // Por defecto: cerrado. También si ERP o piloto están activos.
+  return true;
+}
+
 export const Route = createFileRoute("/api/sesion")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const control =
-          process.env.CONTROL_ACCESO?.trim().toLowerCase() === "si" ||
-          process.env.CONTROL_ACCESO?.trim().toLowerCase() === "activo";
-        const requiereLogin = control || erpActivo() || accesoActivo();
+        const requiereLogin = debeExigirLogin();
 
         try {
           if (erpActivo()) {
