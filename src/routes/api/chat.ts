@@ -3,13 +3,13 @@ import { construirPrompt, fechaHoy } from "@/lib/chat/cerebro";
 import { clasificar } from "@/lib/chat/riesgo";
 import { retrieve, formatContext, formatSources, ESTILO, CEREBRO } from "@/lib/knowledge";
 import { accesoActivo, archivosActivos, errorConfiguracion, erpActivo } from "@/lib/piloto/config.server";
+import { sesionErp } from "@/lib/erp/auth.server";
+import { usuarioCtx } from "@/lib/erp/db.server";
 import { consumirConsulta, devolverConsulta } from "@/lib/piloto/db.server";
 import { sesionDe } from "@/lib/piloto/sesion.server";
 import { SSE_HEADERS, flujoSSE, llamarIA, type MensajeIA, type Parte } from "@/lib/chat/motor.server";
 import { procesarAdjuntos } from "@/lib/erp/adjuntos.server";
 import { formatNaragestContext } from "@/lib/naragest/chat-context";
-import { sesionErp } from "@/lib/erp/auth.server";
-import { usuarioCtx } from "@/lib/erp/db.server";
 
 const MAX_MESSAGES = 40;
 const MAX_TOTAL_CHARS = 28000;
@@ -20,11 +20,6 @@ type Incoming = { role: "user" | "assistant"; content: string };
 
 function fail(message: string, status: number) {
   return Response.json({ error: message }, { status });
-}
-
-function controlAbierto(): boolean {
-  const v = process.env.CONTROL_ACCESO?.trim().toLowerCase();
-  return v === "no" || v === "abierto" || v === "off" || v === "0";
 }
 
 const NEGOCIO_KEYS = [
@@ -84,10 +79,13 @@ export const Route = createFileRoute("/api/chat")({
         let codigoId: number | null = null;
         let generacion = 0;
 
-        // Control de acceso: sin sesión no se consulta (salvo CONTROL_ACCESO=abierto)
-        if (!controlAbierto()) {
-          let ok = false;
+        const controlAbierto = (() => {
+          const v = process.env.CONTROL_ACCESO?.trim().toLowerCase();
+          return v === "no" || v === "abierto" || v === "off" || v === "0";
+        })();
 
+        if (!controlAbierto) {
+          let ok = false;
           if (erpActivo()) {
             try {
               const sid = await sesionErp(request);
@@ -99,7 +97,6 @@ export const Route = createFileRoute("/api/chat")({
               console.error("[chat] sesion erp", e);
             }
           }
-
           if (!ok && accesoActivo()) {
             const fallo = errorConfiguracion();
             if (fallo) {
@@ -113,10 +110,7 @@ export const Route = createFileRoute("/api/chat")({
               ok = true;
             }
           }
-
-          if (!ok) {
-            return fail("Necesitas iniciar sesión en Acceso para consultar a Nara.", 401);
-          }
+          if (!ok) return fail("Necesitas iniciar sesión en Acceso para consultar a Nara.", 401);
         } else if (accesoActivo()) {
           const fallo = errorConfiguracion();
           if (fallo) {
@@ -140,84 +134,129 @@ export const Route = createFileRoute("/api/chat")({
         const hayAdjuntos = Array.isArray(body.adjuntos) && body.adjuntos.length > 0;
         const clientSnapshot =
           typeof body.naragestSnapshot === "string"
-            ? body.naragestSnapshot.slice(0, MAX_SNAPSHOT)
+            ? body.naragestSnapshot.trim().slice(0, MAX_SNAPSHOT)
             : "";
 
-        if (!Array.isArray(messages) || messages.length === 0) {
-          return fail("Falta el historial de la conversación.", 400);
-        }
-        if (messages.length > MAX_MESSAGES) {
-          return fail("La conversación es demasiado larga. Empieza una nueva.", 400);
+        if ((!Array.isArray(messages) || messages.length === 0) && !hayAdjuntos) {
+          return fail("Escribe una consulta o adjunta un archivo.", 400);
         }
 
-        let total = 0;
-        const clean: Incoming[] = [];
-        for (const m of messages) {
-          if (!m || (m.role !== "user" && m.role !== "assistant")) continue;
-          const content = typeof m.content === "string" ? m.content.trim().slice(0, MAX_CHARS) : "";
+        let items: Awaited<ReturnType<typeof procesarAdjuntos>> extends { ok: true; items: infer I } ? I : never = [];
+        if (hayAdjuntos) {
+          if (!archivosActivos()) {
+            return fail("La subida de archivos no está activada (pon ARCHIVOS_ACTIVOS=si o quita ARCHIVOS_ACTIVOS=no).", 403);
+          }
+          const adjuntos = await procesarAdjuntos(body.adjuntos);
+          if (!adjuntos.ok) return fail(adjuntos.error, 400);
+          items = adjuntos.items;
+        }
+
+        const limpios: Incoming[] = [];
+        for (const m of (messages ?? []).slice(-200)) {
+          if (m?.role !== "user" && m?.role !== "assistant") return fail("Mensaje no válido.", 400);
+          if (typeof m.content !== "string") return fail("Mensaje no válido.", 400);
+          const content = m.content.trim().slice(0, MAX_CHARS);
           if (!content) continue;
-          total += content.length;
-          if (total > MAX_TOTAL_CHARS) {
-            return fail("Has enviado demasiado texto. Resume o empieza de nuevo.", 400);
-          }
-          clean.push({ role: m.role, content });
+          const previo = limpios[limpios.length - 1];
+          if (previo && previo.role === m.role) previo.content = `${previo.content}\n\n${content}`.slice(0, MAX_CHARS * 2);
+          else limpios.push({ role: m.role, content });
         }
-        if (clean.length === 0) return fail("No hay mensajes válidos.", 400);
-
-        const lastUser = [...clean].reverse().find((m) => m.role === "user");
-        if (!lastUser) return fail("Falta una pregunta del usuario.", 400);
-
-        if (codigoId != null) {
-          const r = await consumirConsulta(codigoId, generacion);
-          if (!r.ok) return fail(r.error, 429);
+        let trimmed = limpios.slice(-MAX_MESSAGES);
+        let total = trimmed.reduce((n, m) => n + m.content.length, 0);
+        while (trimmed.length > 1 && total > MAX_TOTAL_CHARS) {
+          total -= trimmed[0]!.content.length;
+          trimmed = trimmed.slice(1);
+        }
+        while (trimmed.length > 1 && trimmed[0]!.role !== "user") trimmed = trimmed.slice(1);
+        if ((!trimmed.length || trimmed[trimmed.length - 1]?.role !== "user") && !items.length) {
+          return fail("Escribe una consulta o adjunta un archivo.", 400);
         }
 
-        try {
-          const adjuntosRaw = Array.isArray(body.adjuntos) ? body.adjuntos : [];
-          const adjuntos = hayAdjuntos ? await procesarAdjuntos(adjuntosRaw) : [];
+        const userTurns = trimmed.filter((m) => m.role === "user");
+        const textosAdj = items
+          .filter((i) => i.tipo === "texto")
+          .map((i) => i.texto)
+          .join("\n\n");
+        const query = [userTurns.slice(-2).map((m) => m.content).join(" "), textosAdj].filter(Boolean).join("\n");
+        const found = retrieve(query || "archivo adjunto farmacia");
+        const clasificacion = clasificar(query || "documento");
 
-          const query = lastUser.content;
-          const hits = retrieve(query, 6);
-          const contexto = formatContext(hits);
-          const fuentes = formatSources(hits);
-          const riesgo = clasificar(query);
-
-          let negocio = "";
-          if (quiereDatosNegocio(query)) {
-            negocio = clientSnapshot || formatNaragestContext();
+        let contexto = formatContext(found);
+        if (quiereDatosNegocio(query) || clientSnapshot) {
+          try {
+            const ng = clientSnapshot || formatNaragestContext(new Date());
+            contexto = [contexto, ng].filter(Boolean).join("\n\n");
+          } catch (e) {
+            console.error("[chat] NaraGest context", e);
           }
+        }
 
-          const systemParts = [
-            ESTILO,
-            CEREBRO,
-            construirPrompt({ fecha: fechaHoy(), riesgo }),
-            contexto ? `\n\n### Documentación de apoyo\n${contexto}` : "",
-            fuentes ? `\n\n### Fuentes\n${fuentes}` : "",
-            negocio ? `\n\n### Datos de la farmacia (piloto)\n${negocio}` : "",
-          ].filter(Boolean);
+        const systemPrompt = construirPrompt({
+          cerebro: CEREBRO,
+          estilo: ESTILO,
+          clasificacion,
+          contexto,
+          fecha: fechaHoy(),
+          adjuntos: items.length > 0,
+        });
+        console.log(
+          "[chat-log]",
+          JSON.stringify({
+            riesgo: clasificacion.riesgo,
+            temas: clasificacion.temas,
+            docs: found.map((c) => c.id),
+            acceso: codigoId,
+            adjuntos: items.length,
+            naragest: !!(clientSnapshot || quiereDatosNegocio(query)),
+            snapshotClient: !!clientSnapshot,
+          }),
+        );
+        const sources = formatSources(found);
 
-          const system = systemParts.join("\n");
-
-          const historial: MensajeIA[] = [{ role: "system", content: system }];
-          for (let i = 0; i < clean.length; i++) {
-            const m = clean[i]!;
-            if (i === clean.length - 1 && m.role === "user" && adjuntos.length > 0) {
-              historial.push({
-                role: "user",
-                content: partesAdjuntos(adjuntos, m.content),
-              });
-            } else {
-              historial.push({ role: m.role, content: m.content });
+        if (codigoId !== null) {
+          try {
+            const consumo = await consumirConsulta(codigoId, generacion);
+            if (!consumo.ok) {
+              return consumo.motivo === "inactivo"
+                ? fail("Tu código de acceso está desactivado o ha cambiado. Contacta con quien te invitó al piloto.", 401)
+                : fail(`Has alcanzado el límite de ${consumo.limite} consultas de hoy. Mañana podrás seguir.`, 429);
             }
+          } catch (error) {
+            console.error("[chat] Error al descontar la consulta", error);
+            return fail("No se ha podido comprobar tu acceso. Inténtalo de nuevo.", 503);
           }
-
-          const stream = await llamarIA(historial, { stream: true });
-          return flujoSSE(stream, SSE_HEADERS);
-        } catch (e) {
-          if (codigoId != null) await devolverConsulta(codigoId, generacion);
-          console.error("[chat]", e);
-          return fail("No he podido completar la respuesta. Inténtalo de nuevo.", 502);
         }
+        const reembolsar = () => {
+          if (codigoId !== null) void devolverConsulta(codigoId).catch(() => undefined);
+        };
+
+        const mensajesIA: MensajeIA[] = trimmed.map((m, idx) => {
+          const esUltimoUser = m.role === "user" && idx === trimmed.length - 1;
+          if (!esUltimoUser || !items.length) return { role: m.role, content: m.content };
+          return {
+            role: "user",
+            content: partesAdjuntos(
+              items,
+              m.content || "Analiza el archivo adjunto en contexto de oficina de farmacia.",
+            ),
+          };
+        });
+        if (!trimmed.length && items.length) {
+          mensajesIA.push({
+            role: "user",
+            content: partesAdjuntos(
+              items,
+              "Analiza estos archivos en contexto de oficina de farmacia española. Resume lo relevante y da orientación profesional.",
+            ),
+          });
+        }
+
+        const r = await llamarIA(systemPrompt, mensajesIA);
+        if (!r.ok) {
+          reembolsar();
+          return fail(r.mensaje, r.status);
+        }
+        return new Response(flujoSSE(r.upstream, { final: sources }), { headers: SSE_HEADERS });
       },
     },
   },
