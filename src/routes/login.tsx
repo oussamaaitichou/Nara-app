@@ -100,7 +100,7 @@ function AccesoPage() {
           <NaraMark className="size-10" />
           <div>
             <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">Acceso</h1>
-            <p className="text-sm text-muted">Nara · oficina de farmacia</p>
+            <p className="text-sm text-muted">Nara · NaraGest</p>
           </div>
         </div>
 
@@ -117,13 +117,13 @@ function AccesoPage() {
                 <ShieldCheck className="size-4" /> Acceso abierto
               </p>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                El piloto por código no está activado. Puedes usar Nara sin restricciones.
+                Puedes entrar a NaraGest o consultar a Nara sin restricciones en este entorno.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild className="flex-1">
                 <Link to="/panel">
-                  Ir al panel <ArrowRight className="size-4" />
+                  Ir a NaraGest <ArrowRight className="size-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" className="flex-1">
@@ -181,7 +181,7 @@ function AccesoPage() {
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild className="flex-1">
                 <Link to="/panel">
-                  Ir al panel <ArrowRight className="size-4" />
+                  Ir a NaraGest <ArrowRight className="size-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" className="flex-1">
