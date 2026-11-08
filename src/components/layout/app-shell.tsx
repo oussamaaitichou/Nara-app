@@ -39,13 +39,13 @@ export type ShellItem = {
 };
 
 const NAV: ShellItem[] = [
-  { to: "/consulta", label: "Asistente Nara", icon: MessageSquare, match: (p) => p.startsWith("/consulta"), section: "Nara" },
+  { to: "/consulta", label: "Consultar a Nara", icon: MessageSquare, match: (p) => p.startsWith("/consulta"), section: "Nara" },
   { to: "/valorar", label: "Valorar farmacia", icon: Star, match: (p) => p.startsWith("/valorar") },
-  { to: "/panel", label: "Inicio / Dashboard", icon: LayoutDashboard, match: (p) => p === "/panel", section: "NaraGest" },
+  { to: "/panel", label: "Inicio · NaraGest", icon: LayoutDashboard, match: (p) => p === "/panel", section: "NaraGest" },
   { to: "/stock", label: "Stock e inventario", icon: Package, match: (p) => p.startsWith("/stock") },
   { to: "/compras", label: "Compras y proveedores", icon: ShoppingCart, match: (p) => p.startsWith("/compras") },
   { to: "/ventas", label: "Ventas", icon: Wallet, match: (p) => p.startsWith("/ventas") },
-  { to: "/rentabilidad", label: "Ventas y rentabilidad", icon: TrendingUp, match: (p) => p.startsWith("/rentabilidad") },
+  { to: "/rentabilidad", label: "Rentabilidad", icon: TrendingUp, match: (p) => p.startsWith("/rentabilidad") },
   { to: "/oportunidades", label: "Ideas y oportunidades", icon: Lightbulb, match: (p) => p.startsWith("/oportunidades") },
   { to: "/caducidades", label: "Caducidades", icon: AlertTriangle, match: (p) => p.startsWith("/caducidades") },
   { to: "/caja", label: "Caja y tesorería", icon: BarChart3, match: (p) => p.startsWith("/caja") },
@@ -64,7 +64,7 @@ const NAV: ShellItem[] = [
 ];
 
 const MOBILE_TABS = [
-  { to: "/panel", label: "Inicio", icon: LayoutDashboard, match: (p: string) => p === "/panel" },
+  { to: "/panel", label: "NaraGest", icon: LayoutDashboard, match: (p: string) => p === "/panel" },
   { to: "/stock", label: "Stock", icon: Package, match: (p: string) => p.startsWith("/stock") },
   { to: "/oportunidades", label: "Ideas", icon: Lightbulb, match: (p: string) => p.startsWith("/oportunidades") },
   { to: "/consulta", label: "Nara", icon: MessageSquare, match: (p: string) => p.startsWith("/consulta") },
@@ -103,28 +103,57 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   );
 }
 
-function LogoHome({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
+/** Logos con acceso: Nara → /consulta · NaraGest → /panel */
+function BrandHome({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
   return (
-    <Link
-      to="/panel"
-      onClick={onNavigate}
-      className="flex min-w-0 items-center gap-2.5 transition hover:opacity-90"
-      aria-label="Nara · abrir NaraGest"
-    >
-      <NaraMark className={compact ? "size-8" : "size-9"} />
-      <div className="min-w-0">
-        <p className={cn("font-display font-semibold leading-none tracking-tight", compact ? "text-base text-slate-800" : "text-lg text-white")}>
-          Nara
-        </p>
-        {!compact ? (
-          <p className="mt-1 text-[11px] font-medium text-slate-400">
-            <span className="text-slate-200">NaraGest</span> · IA para farmacia
+    <div className="flex min-w-0 items-center gap-2.5">
+      <Link
+        to="/consulta"
+        onClick={onNavigate}
+        className="flex min-w-0 items-center gap-2.5 transition hover:opacity-90"
+        aria-label="Nara · ir al chat"
+        title="Ir a Nara (chat)"
+      >
+        <NaraMark className={compact ? "size-8" : "size-9"} />
+        <div className="min-w-0">
+          <p
+            className={cn(
+              "font-display font-semibold leading-none tracking-tight",
+              compact ? "text-base text-slate-800" : "text-lg text-white",
+            )}
+          >
+            Nara
           </p>
-        ) : (
-          <p className="truncate text-[10px] text-slate-500">NaraGest</p>
-        )}
-      </div>
-    </Link>
+          {!compact ? null : <p className="truncate text-[10px] text-slate-500">Chat</p>}
+        </div>
+      </Link>
+      {!compact ? (
+        <>
+          <span className="text-slate-500" aria-hidden>
+            ·
+          </span>
+          <Link
+            to="/panel"
+            onClick={onNavigate}
+            className="min-w-0 transition hover:opacity-90"
+            aria-label="NaraGest · ir al panel"
+            title="Ir a NaraGest"
+          >
+            <p className="text-[11px] font-semibold leading-tight text-slate-200">NaraGest</p>
+            <p className="text-[10px] text-slate-400">Gestión</p>
+          </Link>
+        </>
+      ) : (
+        <Link
+          to="/panel"
+          onClick={onNavigate}
+          className="ml-1 rounded-full border border-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600"
+          aria-label="NaraGest · ir al panel"
+        >
+          NaraGest
+        </Link>
+      )}
+    </div>
   );
 }
 
@@ -146,7 +175,7 @@ export function AppShell({
     <div className="flex min-h-dvh bg-[#EEF1F7] text-slate-800">
       <aside className="hidden w-[260px] shrink-0 flex-col bg-[#152238] text-white md:flex">
         <div className="border-b border-white/10 px-5 py-5">
-          <LogoHome />
+          <BrandHome />
         </div>
         <NavLinks pathname={pathname} />
         <div className="mt-auto border-t border-white/10 p-3">
@@ -175,23 +204,36 @@ export function AppShell({
             {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
           <div className="min-w-0 flex-1">
-            <LogoHome compact />
+            <BrandHome compact />
             {title ? <p className="truncate pl-[2.6rem] text-xs text-slate-500">{title}</p> : null}
           </div>
-          <Link to="/consulta" className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#3B6EF5] px-3 text-xs font-semibold text-white">
+          <Link
+            to="/consulta"
+            className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#3B6EF5] px-3 text-xs font-semibold text-white"
+          >
             Nara
           </Link>
         </header>
 
         {menuOpen ? (
           <div className="fixed inset-0 z-40 md:hidden">
-            <button type="button" className="absolute inset-0 bg-slate-900/40" aria-label="Cerrar" onClick={() => setMenuOpen(false)} />
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-900/40"
+              aria-label="Cerrar"
+              onClick={() => setMenuOpen(false)}
+            />
             <div className="absolute inset-y-0 left-0 flex w-[min(100%,290px)] flex-col bg-[#152238] text-white shadow-2xl">
               <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
                 <div className="min-w-0 flex-1">
-                  <LogoHome onNavigate={() => setMenuOpen(false)} />
+                  <BrandHome onNavigate={() => setMenuOpen(false)} />
                 </div>
-                <button type="button" className="size-9 shrink-0 rounded-xl border border-white/15" onClick={() => setMenuOpen(false)} aria-label="Cerrar">
+                <button
+                  type="button"
+                  className="size-9 shrink-0 rounded-xl border border-white/15"
+                  onClick={() => setMenuOpen(false)}
+                  aria-label="Cerrar"
+                >
                   <X className="mx-auto size-4" />
                 </button>
               </div>
@@ -203,16 +245,26 @@ export function AppShell({
         {(title || subtitle) && !fullBleed ? (
           <div className="hidden items-start justify-between gap-4 border-b border-slate-200/70 bg-white/80 px-8 py-5 backdrop-blur-sm md:flex">
             <div>
-              {title ? <h1 className="font-display text-2xl font-semibold tracking-tight text-slate-900">{title}</h1> : null}
+              {title ? (
+                <h1 className="font-display text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
+              ) : null}
               {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
             </div>
-            <Link
-              to="/consulta"
-              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#3B6EF5] px-4 text-sm font-semibold text-white"
-            >
-              <Sparkles className="size-4" />
-              Preguntar a Nara
-            </Link>
+            <div className="flex shrink-0 gap-2">
+              <Link
+                to="/panel"
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700"
+              >
+                NaraGest
+              </Link>
+              <Link
+                to="/consulta"
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-[#3B6EF5] px-4 text-sm font-semibold text-white"
+              >
+                <Sparkles className="size-4" />
+                Nara
+              </Link>
+            </div>
           </div>
         ) : null}
 
