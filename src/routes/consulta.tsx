@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ChatApp } from "@/components/chat/chat-app";
+import { RequireSesion } from "@/components/require-sesion";
 
 type ConsultaSearch = {
   q?: string;
@@ -19,5 +20,9 @@ export const Route = createFileRoute("/consulta")({
 
 function ConsultaPage() {
   const { q, tema } = Route.useSearch();
-  return <ChatApp initialQuestion={q} initialTopic={tema} />;
+  return (
+    <RequireSesion>
+      <ChatApp initialQuestion={q} initialTopic={tema} />
+    </RequireSesion>
+  );
 }

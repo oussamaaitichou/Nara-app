@@ -1,15 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { accesoActivo, erpActivo, COOKIE_ERP, COOKIE_SESION } from "@/lib/piloto/config.server";
+import { accesoActivo, erpActivo } from "@/lib/piloto/config.server";
 import { sesionDe } from "@/lib/piloto/sesion.server";
 import { sesionErp } from "@/lib/erp/auth.server";
 import { usuarioCtx } from "@/lib/erp/db.server";
 import { estadoUso } from "@/lib/piloto/db.server";
 
-/**
- * Estado de sesión unificado para control de acceso.
- * CONTROL_ACCESO=si fuerza login siempre.
- * Si no, se exige login cuando ERP_ACTIVO o PILOTO_ACCESO están activos.
- */
 export const Route = createFileRoute("/api/sesion")({
   server: {
     handlers: {
@@ -19,13 +14,12 @@ export const Route = createFileRoute("/api/sesion")({
           process.env.CONTROL_ACCESO?.trim().toLowerCase() === "activo";
         const requiereLogin = control || erpActivo() || accesoActivo();
 
-        // Sesión ERP (usuario/contraseña)
         try {
           if (erpActivo()) {
             const sid = await sesionErp(request);
             if (sid) {
-              const u = await usuarioCtx(sid.userId);
-              if (u) {
+              const u = await usuarioCtx(sid.uid);
+              if (u && u.version === sid.v) {
                 return Response.json({
                   requiereLogin,
                   autenticado: true,
@@ -41,7 +35,6 @@ export const Route = createFileRoute("/api/sesion")({
           console.error("[sesion] erp", e);
         }
 
-        // Sesión piloto (código)
         try {
           if (accesoActivo()) {
             const ses = await sesionDe(request);
