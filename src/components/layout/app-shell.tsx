@@ -28,6 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { NaraMark } from "@/components/brand/logo";
+import { RequireSesion } from "@/components/require-sesion";
 import { cn } from "@/lib/utils";
 
 export type ShellItem = {
@@ -103,7 +104,6 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   );
 }
 
-/** Logos con acceso: Nara → /consulta · NaraGest → /panel */
 function BrandHome({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
   return (
     <div className="flex min-w-0 items-center gap-2.5">
@@ -172,128 +172,130 @@ export function AppShell({
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="flex min-h-dvh bg-[#EEF1F7] text-slate-800">
-      <aside className="hidden w-[260px] shrink-0 flex-col bg-[#152238] text-white md:flex">
-        <div className="border-b border-white/10 px-5 py-5">
-          <BrandHome />
-        </div>
-        <NavLinks pathname={pathname} />
-        <div className="mt-auto border-t border-white/10 p-3">
-          <div className="mb-2 rounded-2xl bg-white/6 px-3 py-3">
-            <p className="text-[11px] font-medium text-slate-400">Turno actual</p>
-            <p className="mt-0.5 text-sm font-medium text-white">Abierto</p>
+    <RequireSesion>
+      <div className="flex min-h-dvh bg-[#EEF1F7] text-slate-800">
+        <aside className="hidden w-[260px] shrink-0 flex-col bg-[#152238] text-white md:flex">
+          <div className="border-b border-white/10 px-5 py-5">
+            <BrandHome />
           </div>
-          <Link
-            to="/login"
-            className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-white/8 hover:text-white"
-          >
-            <LogOut className="size-4" />
-            Acceso / sesión
-          </Link>
-        </div>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col pb-[4.25rem] md:pb-0">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-3 py-3 backdrop-blur-md md:hidden">
-          <button
-            type="button"
-            aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
-            className="inline-flex size-10 items-center justify-center rounded-2xl border border-slate-200 bg-[#EEF1F7] text-slate-700"
-            onClick={() => setMenuOpen((v) => !v)}
-          >
-            {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-          </button>
-          <div className="min-w-0 flex-1">
-            <BrandHome compact />
-            {title ? <p className="truncate pl-[2.6rem] text-xs text-slate-500">{title}</p> : null}
+          <NavLinks pathname={pathname} />
+          <div className="mt-auto border-t border-white/10 p-3">
+            <div className="mb-2 rounded-2xl bg-white/6 px-3 py-3">
+              <p className="text-[11px] font-medium text-slate-400">Turno actual</p>
+              <p className="mt-0.5 text-sm font-medium text-white">Abierto</p>
+            </div>
+            <Link
+              to="/login"
+              className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-white/8 hover:text-white"
+            >
+              <LogOut className="size-4" />
+              Acceso / sesión
+            </Link>
           </div>
-          <Link
-            to="/consulta"
-            className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#3B6EF5] px-3 text-xs font-semibold text-white"
-          >
-            Nara
-          </Link>
-        </header>
+        </aside>
 
-        {menuOpen ? (
-          <div className="fixed inset-0 z-40 md:hidden">
+        <div className="flex min-w-0 flex-1 flex-col pb-[4.25rem] md:pb-0">
+          <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-3 py-3 backdrop-blur-md md:hidden">
             <button
               type="button"
-              className="absolute inset-0 bg-slate-900/40"
-              aria-label="Cerrar"
-              onClick={() => setMenuOpen(false)}
-            />
-            <div className="absolute inset-y-0 left-0 flex w-[min(100%,290px)] flex-col bg-[#152238] text-white shadow-2xl">
-              <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
-                <div className="min-w-0 flex-1">
-                  <BrandHome onNavigate={() => setMenuOpen(false)} />
+              aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+              className="inline-flex size-10 items-center justify-center rounded-2xl border border-slate-200 bg-[#EEF1F7] text-slate-700"
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+            </button>
+            <div className="min-w-0 flex-1">
+              <BrandHome compact />
+              {title ? <p className="truncate pl-[2.6rem] text-xs text-slate-500">{title}</p> : null}
+            </div>
+            <Link
+              to="/consulta"
+              className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#3B6EF5] px-3 text-xs font-semibold text-white"
+            >
+              Nara
+            </Link>
+          </header>
+
+          {menuOpen ? (
+            <div className="fixed inset-0 z-40 md:hidden">
+              <button
+                type="button"
+                className="absolute inset-0 bg-slate-900/40"
+                aria-label="Cerrar"
+                onClick={() => setMenuOpen(false)}
+              />
+              <div className="absolute inset-y-0 left-0 flex w-[min(100%,290px)] flex-col bg-[#152238] text-white shadow-2xl">
+                <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
+                  <div className="min-w-0 flex-1">
+                    <BrandHome onNavigate={() => setMenuOpen(false)} />
+                  </div>
+                  <button
+                    type="button"
+                    className="size-9 shrink-0 rounded-xl border border-white/15"
+                    onClick={() => setMenuOpen(false)}
+                    aria-label="Cerrar"
+                  >
+                    <X className="mx-auto size-4" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="size-9 shrink-0 rounded-xl border border-white/15"
-                  onClick={() => setMenuOpen(false)}
-                  aria-label="Cerrar"
-                >
-                  <X className="mx-auto size-4" />
-                </button>
+                <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
               </div>
-              <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        {(title || subtitle) && !fullBleed ? (
-          <div className="hidden items-start justify-between gap-4 border-b border-slate-200/70 bg-white/80 px-8 py-5 backdrop-blur-sm md:flex">
-            <div>
-              {title ? (
-                <h1 className="font-display text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
-              ) : null}
-              {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
+          {(title || subtitle) && !fullBleed ? (
+            <div className="hidden items-start justify-between gap-4 border-b border-slate-200/70 bg-white/80 px-8 py-5 backdrop-blur-sm md:flex">
+              <div>
+                {title ? (
+                  <h1 className="font-display text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
+                ) : null}
+                {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <Link
+                  to="/panel"
+                  className="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700"
+                >
+                  NaraGest
+                </Link>
+                <Link
+                  to="/consulta"
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-[#3B6EF5] px-4 text-sm font-semibold text-white"
+                >
+                  <Sparkles className="size-4" />
+                  Nara
+                </Link>
+              </div>
             </div>
-            <div className="flex shrink-0 gap-2">
-              <Link
-                to="/panel"
-                className="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700"
-              >
-                NaraGest
-              </Link>
-              <Link
-                to="/consulta"
-                className="inline-flex h-10 items-center gap-2 rounded-full bg-[#3B6EF5] px-4 text-sm font-semibold text-white"
-              >
-                <Sparkles className="size-4" />
-                Nara
-              </Link>
-            </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        <div className={cn("flex-1", fullBleed ? "min-h-0" : "px-4 py-5 sm:px-8 sm:py-6")}>{children}</div>
+          <div className={cn("flex-1", fullBleed ? "min-h-0" : "px-4 py-5 sm:px-8 sm:py-6")}>{children}</div>
 
-        <nav
-          className="fixed inset-x-0 bottom-0 z-30 flex border-t border-slate-200 bg-white/95 backdrop-blur-md md:hidden"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-          aria-label="Principal"
-        >
-          {MOBILE_TABS.map((tab) => {
-            const active = tab.match(pathname);
-            const Icon = tab.icon;
-            return (
-              <Link
-                key={tab.to + tab.label}
-                to={tab.to}
-                className={cn(
-                  "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium",
-                  active ? "text-[#3B6EF5]" : "text-slate-400",
-                )}
-              >
-                <Icon className="size-5" strokeWidth={active ? 2.25 : 1.75} />
-                {tab.label}
-              </Link>
-            );
-          })}
-        </nav>
+          <nav
+            className="fixed inset-x-0 bottom-0 z-30 flex border-t border-slate-200 bg-white/95 backdrop-blur-md md:hidden"
+            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+            aria-label="Principal"
+          >
+            {MOBILE_TABS.map((tab) => {
+              const active = tab.match(pathname);
+              const Icon = tab.icon;
+              return (
+                <Link
+                  key={tab.to + tab.label}
+                  to={tab.to}
+                  className={cn(
+                    "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium",
+                    active ? "text-[#3B6EF5]" : "text-slate-400",
+                  )}
+                >
+                  <Icon className="size-5" strokeWidth={active ? 2.25 : 1.75} />
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
       </div>
-    </div>
+    </RequireSesion>
   );
 }
