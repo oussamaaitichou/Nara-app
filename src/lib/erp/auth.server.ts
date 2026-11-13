@@ -44,7 +44,8 @@ export function passwordInvalida(pw: string): string | null {
   return null;
 }
 
-export const crearSesionErp = (uid: number, version: number) => firmar({ tipo: "erp", uid, v: version }, "12h");
+/** Sesión de cuenta (NaraGest): 14 días para poder entrar cuando quieran. */
+export const crearSesionErp = (uid: number, version: number) => firmar({ tipo: "erp", uid, v: version }, "14d");
 
 export async function sesionErp(request: Request): Promise<{ uid: number; v: number } | null> {
   const p = await leer(leerCookie(request, COOKIE_ERP));

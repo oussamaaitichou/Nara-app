@@ -8,10 +8,30 @@ export function accesoActivo(): boolean {
   return process.env.PILOTO_ACCESO?.trim().toLowerCase() === "activo";
 }
 
-/** Clave para firmar las sesiones. Mínimo 32 caracteres. */
+/** Clave actual para firmar JWT. Mínimo 32 caracteres. */
 export function secreto(): string | null {
   const s = process.env.SESSION_SECRET?.trim();
   return s && s.length >= 32 ? s : null;
+}
+
+/**
+ * Clave anterior (rotación): solo se usa para verificar tokens firmados
+ * antes de cambiar SESSION_SECRET. Opcional.
+ */
+export function secretoAnterior(): string | null {
+  const s = process.env.SESSION_SECRET_PREV?.trim();
+  return s && s.length >= 32 ? s : null;
+}
+
+/**
+ * Pimienta para hashear códigos piloto.
+ * Independiente de SESSION_SECRET para que rotar JWT no invalide los códigos.
+ * Si no está definida, se usa SESSION_SECRET (comportamiento anterior).
+ */
+export function codePepper(): string | null {
+  const p = process.env.CODE_PEPPER?.trim();
+  if (p && p.length >= 32) return p;
+  return secreto();
 }
 
 /** Contraseña del panel de administración. Mínimo 8 caracteres. Sin ella, el panel está desactivado. */

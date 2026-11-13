@@ -1,26 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { COOKIE_ERP, erpActivo, errorConfiguracion } from "@/lib/piloto/config.server";
+import { COOKIE_ERP, errorConfiguracion, erpActivo } from "@/lib/piloto/config.server";
 import { cookieSet, pausa } from "@/lib/piloto/sesion.server";
+import { auditar, falloLogin, loginOk, usuarioCtx, usuarioPorIdentificador } from "@/lib/erp/db.server";
+import { rutaPorPlan } from "@/lib/piloto/planes";
 import { crearSesionErp, verificarPassword, verificacionFalsa } from "@/lib/erp/auth.server";
-import { auditar, falloLogin, loginOk, usuarioCtx } from "@/lib/erp/db.server";
-import { usuarioPorIdentificador } from "@/lib/erp/login-id.server";
-import { rutaPorPlan } from "@/lib/acceso-plan";
 
-const DOCE_HORAS = 60 * 60 * 12;
+/** Alineado con JWT 14d. */
+const CATORCE_DIAS = 60 * 60 * 24 * 14;
 
 export const Route = createFileRoute("/api/login-cuenta")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         if (!erpActivo()) {
-          return Response.json(
-            { error: "El acceso por cuenta no está activado. Activa ERP_ACTIVO=si en Vercel." },
-            { status: 503 },
-          );
+          return Response.json({ error: "El acceso por cuenta no está activado." }, { status: 403 });
         }
-        const falloCfg = errorConfiguracion();
-        if (falloCfg) {
-          console.error("[login-cuenta]", falloCfg);
+        if (errorConfiguracion()) {
           return Response.json({ error: "Configuración incompleta." }, { status: 503 });
         }
 
@@ -75,7 +70,7 @@ export const Route = createFileRoute("/api/login-cuenta")({
                 ? { id: u.id, nombre: u.nombre, email: u.email, rol: u.rol }
                 : { id: fila.id, nombre: fila.nombre, email: fila.email },
             },
-            { headers: { "Set-Cookie": cookieSet(request, COOKIE_ERP, token, DOCE_HORAS) } },
+            { headers: { "Set-Cookie": cookieSet(request, COOKIE_ERP, token, CATORCE_DIAS) } },
           );
         } catch (e) {
           console.error("[login-cuenta]", e);

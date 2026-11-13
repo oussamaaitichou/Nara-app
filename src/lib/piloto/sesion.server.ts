@@ -1,27 +1,45 @@
 import { SignJWT, jwtVerify } from "jose";
 import { createHash, randomInt, timingSafeEqual } from "node:crypto";
-import { COOKIE_ADMIN, COOKIE_SESION, secreto } from "./config.server";
+import {
+  COOKIE_ADMIN,
+  COOKIE_SESION,
+  codePepper,
+  secreto,
+  secretoAnterior,
+} from "./config.server";
 
 const enc = new TextEncoder();
 const ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin O/0, I/1 para evitar confusiones
 
 export const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Firma siempre con la clave actual (SESSION_SECRET). */
 export async function firmar(payload: Record<string, unknown>, expira: string): Promise<string> {
   const s = secreto();
   if (!s) throw new Error("SESSION_SECRET no configurado");
-  return new SignJWT(payload).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(expira).sign(enc.encode(s));
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256", kid: "curr" })
+    .setIssuedAt()
+    .setExpirationTime(expira)
+    .sign(enc.encode(s));
 }
 
+/**
+ * Verifica el JWT con la clave actual y, si falla, con SESSION_SECRET_PREV
+ * (ventana de gracia tras rotar la clave).
+ */
 export async function leer(token: string | undefined): Promise<Record<string, unknown> | null> {
-  const s = secreto();
-  if (!s || !token) return null;
-  try {
-    const { payload } = await jwtVerify(token, enc.encode(s), { algorithms: ["HS256"] });
-    return payload as Record<string, unknown>;
-  } catch {
-    return null;
+  if (!token) return null;
+  const claves = [secreto(), secretoAnterior()].filter((x): x is string => !!x);
+  for (const s of claves) {
+    try {
+      const { payload } = await jwtVerify(token, enc.encode(s), { algorithms: ["HS256"] });
+      return payload as Record<string, unknown>;
+    } catch {
+      /* prueba la siguiente clave */
+    }
   }
+  return null;
 }
 
 export function leerCookie(request: Request, nombre: string): string | undefined {
@@ -50,6 +68,7 @@ export function cookieBorrar(request: Request, nombre: string): string {
   return `${nombre}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${seguro(request) ? "; Secure" : ""}`;
 }
 
+/** Sesión por código piloto: 30 días. */
 export async function crearSesionFarmacia(codigoId: number, generacion: number): Promise<string> {
   return firmar({ tipo: "farmacia", cid: codigoId, gen: generacion }, "30d");
 }
@@ -61,6 +80,7 @@ export async function sesionDe(request: Request): Promise<{ cid: number; gen: nu
   return { cid: p.cid, gen: p.gen };
 }
 
+/** Admin: 8 horas (más estricto). */
 export async function crearSesionAdmin(): Promise<string> {
   return firmar({ tipo: "admin" }, "8h");
 }
@@ -76,8 +96,9 @@ export function normalizarCodigo(texto: string): string {
   return n;
 }
 
+/** Hash de códigos piloto: CODE_PEPPER (o SESSION_SECRET si no hay pepper). */
 export function hashCodigo(texto: string): string {
-  return createHash("sha256").update(`${secreto() ?? ""}|${normalizarCodigo(texto)}`).digest("hex");
+  return createHash("sha256").update(`${codePepper() ?? ""}|${normalizarCodigo(texto)}`).digest("hex");
 }
 
 /** Formato NARA-XXXXX-XXXXX (10 caracteres al azar, unos 50 bits). */
