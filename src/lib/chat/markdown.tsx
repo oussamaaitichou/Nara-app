@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
-import { sanitizeUserText } from "@/lib/security/xss";
+
+/** Quita caracteres de control; React ya escapa el HTML al pintar. */
+function sanitizeText(input: string, maxLen = 100_000): string {
+  // eslint-disable-next-line no-control-regex
+  return input.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").slice(0, maxLen);
+}
 
 /**
  * Markdown seguro: solo genera elementos React con texto escapado por React.
@@ -44,8 +49,7 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
 }
 
 export function Markdown({ text }: { text: string }) {
-  // Limpia controles; el HTML literal se muestra como texto (React escapa).
-  const safe = sanitizeUserText(text, 100_000);
+  const safe = sanitizeText(text);
   const lines = safe.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
   let i = 0;
