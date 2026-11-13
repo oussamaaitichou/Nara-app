@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
+import { sanitizeUserText } from "@/lib/security/xss";
 
+/**
+ * Markdown seguro: solo genera elementos React con texto escapado por React.
+ * No usa dangerouslySetInnerHTML ni interpreta etiquetas HTML del modelo.
+ */
 function inline(text: string, keyPrefix: string): ReactNode[] {
   const parts: ReactNode[] = [];
   const re = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
@@ -17,7 +22,10 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
       );
     } else if (token.startsWith("`")) {
       parts.push(
-        <code key={`${keyPrefix}-c${i}`} className="rounded-xs bg-teal-mist px-1 py-0.5 font-mono text-[0.9em] text-teal-deep">
+        <code
+          key={`${keyPrefix}-c${i}`}
+          className="rounded-xs bg-teal-mist px-1 py-0.5 font-mono text-[0.9em] text-teal-deep"
+        >
           {token.slice(1, -1)}
         </code>,
       );
@@ -36,7 +44,9 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
 }
 
 export function Markdown({ text }: { text: string }) {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  // Limpia controles; el HTML literal se muestra como texto (React escapa).
+  const safe = sanitizeUserText(text, 100_000);
+  const lines = safe.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
   let i = 0;
   let k = 0;
@@ -94,7 +104,13 @@ export function Markdown({ text }: { text: string }) {
     }
 
     const para: string[] = [];
-    while (i < lines.length && (lines[i] ?? "").trim() && !/^#{1,3}\s/.test(lines[i] ?? "") && !/^\d+\.\s/.test(lines[i] ?? "") && !/^[-*]\s/.test(lines[i] ?? "")) {
+    while (
+      i < lines.length &&
+      (lines[i] ?? "").trim() &&
+      !/^#{1,3}\s/.test(lines[i] ?? "") &&
+      !/^\d+\.\s/.test(lines[i] ?? "") &&
+      !/^[-*]\s/.test(lines[i] ?? "")
+    ) {
       para.push(lines[i] ?? "");
       i += 1;
     }
