@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { COOKIE_ERP, errorConfiguracion, erpActivo } from "@/lib/piloto/config.server";
 import { cookieSet, pausa } from "@/lib/piloto/sesion.server";
 import { auditar, falloLogin, loginOk, usuarioCtx, usuarioPorIdentificador } from "@/lib/erp/db.server";
-import { rutaPorPlan } from "@/lib/piloto/planes";
+import { rutaPorPlan } from "@/lib/acceso-plan";
 import { crearSesionErp, verificarPassword, verificacionFalsa } from "@/lib/erp/auth.server";
 
 /** Alineado con JWT 14d. */
