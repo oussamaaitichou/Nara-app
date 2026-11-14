@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { COOKIE_ERP, errorConfiguracion, erpActivo } from "@/lib/piloto/config.server";
 import { cookieSet, pausa } from "@/lib/piloto/sesion.server";
-import { auditar, falloLogin, loginOk, usuarioCtx, usuarioPorIdentificador } from "@/lib/erp/db.server";
+import { auditar, falloLogin, loginOk, usuarioCtx, usuarioPorEmail } from "@/lib/erp/db.server";
 import { rutaPorPlan } from "@/lib/acceso-plan";
 import { crearSesionErp, verificarPassword, verificacionFalsa } from "@/lib/erp/auth.server";
 
-/** Alineado con JWT 14d. */
 const CATORCE_DIAS = 60 * 60 * 24 * 14;
 
 export const Route = createFileRoute("/api/login-cuenta")({
@@ -34,7 +33,7 @@ export const Route = createFileRoute("/api/login-cuenta")({
         }
 
         try {
-          const fila = await usuarioPorIdentificador(identificador);
+          const filaBase = await usuarioPorEmail(identificador.trim());
           const rechazo = async (id?: number) => {
             if (id) await falloLogin(id);
             else await verificacionFalsa(password);
@@ -42,24 +41,24 @@ export const Route = createFileRoute("/api/login-cuenta")({
             return Response.json({ error: "Usuario o contraseña incorrectos." }, { status: 401 });
           };
 
-          if (!fila) return rechazo();
-          if (fila.bloqueado) {
+          if (!filaBase) return rechazo();
+          if (filaBase.bloqueado) {
             return Response.json(
               { error: "Cuenta bloqueada temporalmente. Prueba en 15 minutos." },
               { status: 429 },
             );
           }
-          if (!(await verificarPassword(password, fila.pass_hash))) {
-            await auditar(fila.id, fila.asesoria_id, "login_fallido");
-            return rechazo(fila.id);
+          if (!(await verificarPassword(password, filaBase.pass_hash))) {
+            await auditar(filaBase.id, filaBase.asesoria_id, "login_fallido");
+            return rechazo(filaBase.id);
           }
-          if (!fila.activo || !fila.asesoria_activa) return rechazo();
+          if (!filaBase.activo || !filaBase.asesoria_activa) return rechazo();
 
-          await loginOk(fila.id);
-          await auditar(fila.id, fila.asesoria_id, "login");
-          const u = await usuarioCtx(fila.id);
-          const plan = fila.plan || "gratis";
-          const token = await crearSesionErp(fila.id, fila.version);
+          await loginOk(filaBase.id);
+          await auditar(filaBase.id, filaBase.asesoria_id, "login");
+          const u = await usuarioCtx(filaBase.id);
+          const plan = (u?.plan as string) || "gratis";
+          const token = await crearSesionErp(filaBase.id, filaBase.version);
 
           return Response.json(
             {
@@ -68,7 +67,7 @@ export const Route = createFileRoute("/api/login-cuenta")({
               destino: rutaPorPlan(plan),
               usuario: u
                 ? { id: u.id, nombre: u.nombre, email: u.email, rol: u.rol }
-                : { id: fila.id, nombre: fila.nombre, email: fila.email },
+                : { id: filaBase.id, nombre: "", email: identificador.trim() },
             },
             { headers: { "Set-Cookie": cookieSet(request, COOKIE_ERP, token, CATORCE_DIAS) } },
           );
