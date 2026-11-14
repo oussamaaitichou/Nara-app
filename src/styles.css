@@ -3,11 +3,7 @@
 @import "tw-animate-css";
 
 /*
- * Nara Materials — identidad visual
- * Referencias: thermal, fluted glass, caustics, halftone, blueprint, felt,
- * dither, grain, paper, topographic, grass, noise, impressionist, dot matrix,
- * cloudy, pixel, blur, stipple, lens, ASCII accents, iridescent.
- * Uso profesional: legible en farmacia; efectos como capas, no como ruido.
+ * Nara Materials — versión estable (sin data-URI SVG para no romper PostCSS/Vite).
  */
 
 @theme {
@@ -35,7 +31,6 @@
   --color-warn: #8a5a1e;
   --color-warn-soft: #f3ead8;
 
-  /* Thermal / iridescent accents */
   --color-thermal-cold: #1b6b7a;
   --color-thermal-mid: #1a5a4c;
   --color-thermal-warm: #c45c2a;
@@ -143,16 +138,6 @@
   }
 }
 
-@keyframes nara-caret {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.2;
-  }
-}
-
 @keyframes nara-caustic {
   0% {
     background-position: 0% 40%, 100% 60%, 50% 0%;
@@ -162,15 +147,6 @@
   }
   100% {
     background-position: 0% 40%, 100% 60%, 50% 0%;
-  }
-}
-
-@keyframes nara-iris {
-  0% {
-    filter: hue-rotate(0deg);
-  }
-  100% {
-    filter: hue-rotate(25deg);
   }
 }
 
@@ -185,23 +161,20 @@
 @media (prefers-reduced-motion: reduce) {
   .nara-rise,
   .nara-dot,
-  .nara-caustics,
-  .nara-iridescent {
+  .nara-caustics {
     animation: none;
   }
 }
 
-/* 10 · Paper + 13 · Noise + 9 · Grainy gradients */
+/* Paper + grain (CSS only) */
 .nara-paper {
   background-color: var(--color-bg);
   background-image:
     radial-gradient(ellipse 90% 55% at 8% -15%, rgb(26 90 76 / 0.1), transparent 55%),
     radial-gradient(ellipse 70% 45% at 100% 0%, rgb(196 92 42 / 0.06), transparent 50%),
-    radial-gradient(ellipse 50% 40% at 50% 100%, rgb(27 107 122 / 0.05), transparent 55%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.14  0 0 0 0 0.12  0 0 0 0.04 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    radial-gradient(ellipse 50% 40% at 50% 100%, rgb(27 107 122 / 0.05), transparent 55%);
 }
 
-/* 1 · Thermal gradients */
 .nara-thermal {
   background-image: linear-gradient(
     125deg,
@@ -222,13 +195,12 @@
   );
 }
 
-/* 2 · Fluted glass */
 .nara-glass {
   background: linear-gradient(
     165deg,
-    rgb(255 255 255 / 0.72) 0%,
-    rgb(255 252 247 / 0.55) 45%,
-    rgb(240 245 242 / 0.5) 100%
+    rgb(255 255 255 / 0.78) 0%,
+    rgb(255 252 247 / 0.62) 45%,
+    rgb(240 245 242 / 0.55) 100%
   );
   border: 1px solid rgb(255 255 255 / 0.55);
   backdrop-filter: blur(16px) saturate(1.15);
@@ -254,7 +226,6 @@
   border-radius: inherit;
 }
 
-/* 3 · Water caustics */
 .nara-caustics {
   background-color: var(--color-teal-deep);
   background-image:
@@ -266,47 +237,33 @@
   color: #f4f0e8;
 }
 
-/* 4 · Halftone + 15 · Dot matrix + 19 · Stippled */
-.nara-halftone {
-  background-image: radial-gradient(circle, rgb(20 32 28 / 0.14) 1px, transparent 1.2px);
+.nara-halftone,
+.nara-stipple {
+  background-image: radial-gradient(circle, rgb(20 32 28 / 0.12) 1px, transparent 1.2px);
   background-size: 6px 6px;
 }
 
-.nara-stipple {
-  background-image: radial-gradient(circle, rgb(26 90 76 / 0.18) 0.8px, transparent 1px);
-  background-size: 5px 5px;
-}
-
-/* 5 · Monochrome landscapes */
 .nara-mono {
   filter: grayscale(1) contrast(1.05);
 }
 
-/* 6 · Blueprint grids */
 .nara-grid,
 .nara-blueprint {
-  background-color: transparent;
   background-image:
     linear-gradient(to right, rgb(26 90 76 / 0.07) 1px, transparent 1px),
     linear-gradient(to bottom, rgb(26 90 76 / 0.07) 1px, transparent 1px),
     linear-gradient(to right, rgb(26 90 76 / 0.03) 1px, transparent 1px),
     linear-gradient(to bottom, rgb(26 90 76 / 0.03) 1px, transparent 1px);
-  background-size:
-    48px 48px,
-    48px 48px,
-    12px 12px,
-    12px 12px;
+  background-size: 48px 48px, 48px 48px, 12px 12px, 12px 12px;
 }
 
-/* 7 · Felt texture */
 .nara-felt {
   background-color: var(--color-surface-2);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.15  0 0 0 0 0.2  0 0 0 0 0.17  0 0 0 0.08 0'/></filter><rect width='100%' height='100%' filter='url(%23f)'/></svg>");
 }
 
-/* 8 · Dithered images (pattern overlay) */
 .nara-dither {
-  background-image: repeating-linear-gradient(
+  background-image:
+    repeating-linear-gradient(
       0deg,
       transparent,
       transparent 1px,
@@ -322,20 +279,28 @@
     );
 }
 
-/* 11 · Topographic lines */
 .nara-topo {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'><path d='M20 120c30-40 60-40 90 0s60 40 90 0' fill='none' stroke='%231a5a4c' stroke-opacity='0.12' stroke-width='1'/><path d='M10 140c35-50 70-50 105 0s70 50 105 0' fill='none' stroke='%231a5a4c' stroke-opacity='0.09' stroke-width='1'/><path d='M30 100c28-32 56-32 84 0s56 32 84 0' fill='none' stroke='%231a5a4c' stroke-opacity='0.1' stroke-width='1'/><path d='M40 160c40-55 80-55 120 0' fill='none' stroke='%231a5a4c' stroke-opacity='0.08' stroke-width='1'/></svg>");
-  background-size: 240px 240px;
-}
-
-/* 12 · Grass texture (soft organic noise) */
-.nara-grass {
   background-image:
-    linear-gradient(180deg, rgb(26 90 76 / 0.04), transparent 40%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><filter id='g'><feTurbulence type='turbulence' baseFrequency='0.7' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.25  0 0 0 0 0.15  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>");
+    repeating-radial-gradient(
+      ellipse at 30% 40%,
+      transparent 0,
+      transparent 18px,
+      rgb(26 90 76 / 0.06) 18px,
+      rgb(26 90 76 / 0.06) 19px
+    ),
+    repeating-radial-gradient(
+      ellipse at 70% 60%,
+      transparent 0,
+      transparent 22px,
+      rgb(26 90 76 / 0.04) 22px,
+      rgb(26 90 76 / 0.04) 23px
+    );
 }
 
-/* 14 · Impressionist (soft color washes) */
+.nara-grass {
+  background-image: linear-gradient(180deg, rgb(26 90 76 / 0.05), transparent 45%);
+}
+
 .nara-impressionist {
   background-image:
     radial-gradient(circle at 20% 30%, rgb(91 138 154 / 0.15), transparent 40%),
@@ -344,39 +309,21 @@
     radial-gradient(circle at 30% 70%, rgb(196 92 42 / 0.08), transparent 40%);
 }
 
-/* 16 · Cloudy sky */
 .nara-cloudy {
   background-image:
     radial-gradient(ellipse 50% 30% at 20% 30%, rgb(255 255 255 / 0.5), transparent),
     radial-gradient(ellipse 40% 25% at 70% 25%, rgb(255 255 255 / 0.35), transparent),
-    radial-gradient(ellipse 45% 28% at 45% 60%, rgb(255 255 255 / 0.25), transparent),
     linear-gradient(180deg, #d4e4ec, #eef2ef 55%, var(--color-bg));
 }
 
-/* 17 · Pixel mosaic */
 .nara-pixel {
-  image-rendering: pixelated;
   background-size: 8px 8px;
-  background-image: linear-gradient(
-      45deg,
-      rgb(26 90 76 / 0.06) 25%,
-      transparent 25%,
-      transparent 75%,
-      rgb(26 90 76 / 0.06) 75%
-    ),
-    linear-gradient(
-      45deg,
-      rgb(26 90 76 / 0.06) 25%,
-      transparent 25%,
-      transparent 75%,
-      rgb(26 90 76 / 0.06) 75%
-    );
-  background-position:
-    0 0,
-    4px 4px;
+  background-image:
+    linear-gradient(45deg, rgb(26 90 76 / 0.06) 25%, transparent 25%, transparent 75%, rgb(26 90 76 / 0.06) 75%),
+    linear-gradient(45deg, rgb(26 90 76 / 0.06) 25%, transparent 25%, transparent 75%, rgb(26 90 76 / 0.06) 75%);
+  background-position: 0 0, 4px 4px;
 }
 
-/* 18 · Blurred photos (hero soft focus) */
 .nara-blur-layer {
   filter: blur(28px) saturate(1.1);
   opacity: 0.55;
@@ -384,12 +331,10 @@
   pointer-events: none;
 }
 
-/* 20 · Lens distortion (subtle vignette) */
 .nara-lens {
-  box-shadow: inset 0 0 80px rgb(20 32 28 / 0.12);
+  box-shadow: inset 0 0 80px rgb(20 32 28 / 0.1);
 }
 
-/* 21 · ASCII art accents (mono captions) */
 .nara-ascii {
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -399,7 +344,6 @@
   white-space: pre;
 }
 
-/* 22 · Iridescent 3D */
 .nara-iridescent {
   background-image: linear-gradient(
     120deg,
@@ -409,7 +353,6 @@
     var(--color-iris-3),
     var(--color-thermal-hot)
   );
-  background-size: 200% 200%;
   color: #fff;
   box-shadow: var(--shadow-lift), 0 0 0 1px rgb(255 255 255 / 0.2) inset;
 }
@@ -422,7 +365,6 @@
     var(--color-thermal-warm),
     var(--color-teal)
   );
-  background-size: 160% 160%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -432,30 +374,20 @@
   box-shadow: var(--shadow-lift);
 }
 
-/* Combinación recomendada para shells / landing */
 .nara-stage {
   position: relative;
   isolation: isolate;
   background-color: var(--color-bg);
-}
-
-.nara-stage::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 1;
   background-image:
     radial-gradient(ellipse 90% 55% at 8% -15%, rgb(26 90 76 / 0.1), transparent 55%),
     radial-gradient(ellipse 70% 45% at 100% 0%, rgb(196 92 42 / 0.05), transparent 50%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'><path d='M20 120c30-40 60-40 90 0s60 40 90 0' fill='none' stroke='%231a5a4c' stroke-opacity='0.1' stroke-width='1'/><path d='M10 140c35-50 70-50 105 0s70 50 105 0' fill='none' stroke='%231a5a4c' stroke-opacity='0.07' stroke-width='1'/></svg>"),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.14  0 0 0 0 0.12  0 0 0 0.035 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  background-size:
-    auto,
-    auto,
-    240px 240px,
-    160px 160px;
+    repeating-radial-gradient(
+      ellipse at 40% 20%,
+      transparent 0,
+      transparent 28px,
+      rgb(26 90 76 / 0.045) 28px,
+      rgb(26 90 76 / 0.045) 29px
+    );
 }
 
 .prose-nara a {
