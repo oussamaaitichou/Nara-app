@@ -96,31 +96,90 @@ export async function usuarioPorEmail(email: string) {
     from erp_usuarios u join erp_asesorias a on a.id = u.asesoria_id where lower(u.email) = ${email.toLowerCase()}`;
   return r[0] ?? null;
 }
-
 export async function usuarioCtx(id: number): Promise<UsuarioCtx | null> {
   const sql = await db();
   const r = await sql<UsuarioCtx>`
-    select u.id, u.asesoria_id, u.farmacia_id, u.email, u.nombre, u.rol, u.debe_cambiar, u.activo, u.version,
-      a.nombre as asesoria_nombre, a.logo, a.activa as asesoria_activa, a.plan
+    select u.id, u.asesoria_id, u.farmacia_id, u.email, u.nombre, u.rol, u.debe_cambiar, u.activo, u.version, a.nombre as asesoria_nombre, a.logo, a.activa as asesoria_activa, a.plan
     from erp_usuarios u join erp_asesorias a on a.id = u.asesoria_id where u.id = ${id}`;
-  const u = r[0];
-  if (!u) return null;
-  return { ...u, plan: u.plan === "premium" ? "premium" : "gratis" };
+  return r[0] ?? null;
+}
+export async function falloLogin(id: number) {
+  const sql = await db();
+  await sql`update erp_usuarios set intentos = intentos + 1 where id = ${id}`;
+  await sql`update erp_usuarios set bloqueado_hasta = now() + interval '15 minutes', intentos = 0 where id = ${id} and intentos >= 5`;
+}
+export async function loginOk(id: number) {
+  const sql = await db();
+  await sql`update erp_usuarios set intentos = 0, bloqueado_hasta = null, ultimo_acceso = now() where id = ${id}`;
+}
+export async function cambiarPassword(id: number, hash: string): Promise<number> {
+  const sql = await db();
+  const r = await sql<{ version: number }>`update erp_usuarios set pass_hash = ${hash}, debe_cambiar = false, version = version + 1 where id = ${id} returning version`;
+  return r[0]!.version;
+}
+export async function listarUsuarios(asesoriaId: number) {
+  const sql = await db();
+  return sql<{ id: number; email: string; nombre: string; rol: Rol; activo: boolean; farmacia_id: number | null; farmacia: string | null; ultimo_acceso: string | null }>`
+    select u.id, u.email, u.nombre, u.rol, u.activo, u.farmacia_id, f.nombre as farmacia, u.ultimo_acceso
+    from erp_usuarios u left join erp_farmacias f on f.id = u.farmacia_id where u.asesoria_id = ${asesoriaId} order by u.rol, u.nombre`;
+}
+export async function crearUsuario(u: { asesoriaId: number; farmaciaId: number | null; email: string; nombre: string; rol: Rol }) {
+  const sql = await db();
+  if ((await sql`select 1 as x from erp_usuarios where lower(email) = ${u.email.toLowerCase()}`).length) return null;
+  const pass = passwordTemporal();
+  const r = await sql<{ id: number }>`insert into erp_usuarios (asesoria_id, farmacia_id, email, nombre, rol, pass_hash) values (${u.asesoriaId}, ${u.farmaciaId}, ${u.email}, ${u.nombre}, ${u.rol}, ${await hashPassword(pass)}) returning id`;
+  return { id: r[0]!.id, passwordTemporal: pass };
+}
+export async function resetPassword(id: number, asesoriaId: number): Promise<string | null> {
+  const sql = await db();
+  const pass = passwordTemporal();
+  const r = await sql`update erp_usuarios set pass_hash = ${await hashPassword(pass)}, debe_cambiar = true, version = version + 1, intentos = 0, bloqueado_hasta = null where id = ${id} and asesoria_id = ${asesoriaId} returning id`;
+  return r.length ? pass : null;
+}
+export async function estadoUsuario(id: number, asesoriaId: number, activo: boolean) {
+  const sql = await db();
+  await sql`update erp_usuarios set activo = ${activo}, version = version + 1 where id = ${id} and asesoria_id = ${asesoriaId}`;
+}
+export async function guardarLogo(asesoriaId: number, logo: string | null) {
+  const sql = await db();
+  await sql`update erp_asesorias set logo = ${logo} where id = ${asesoriaId}`;
 }
 
-export async function marcarAcceso(id: number) {
+export async function listarFarmacias(asesoriaId: number, soloId: number | null) {
   const sql = await db();
-  await sql`update erp_usuarios set ultimo_acceso = now(), intentos = 0 where id = ${id}`;
+  return sql<FarmaciaFila>`
+    select f.id, f.nombre, f.ccaa, f.titular, f.activa, (select count(*) from erp_datos_mensuales d where d.farmacia_id = f.id) as meses
+    from erp_farmacias f where f.asesoria_id = ${asesoriaId} and (${soloId}::int is null or f.id = ${soloId}::int) order by f.nombre`;
 }
-
-export async function registrarFalloLogin(id: number) {
+export async function farmaciaDe(id: number, asesoriaId: number) {
   const sql = await db();
-  await sql`update erp_usuarios set intentos = intentos + 1, bloqueado_hasta = case when intentos + 1 >= 5 then now() + interval '15 minutes' else bloqueado_hasta end where id = ${id}`;
+  const r = await sql<{ id: number; nombre: string; ccaa: string | null; titular: string | null; activa: boolean }>`select id, nombre, ccaa, titular, activa from erp_farmacias where id = ${id} and asesoria_id = ${asesoriaId}`;
+  return r[0] ?? null;
 }
-
-export async function cambiarPassword(id: number, nuevoHash: string) {
+export async function crearFarmacia(asesoriaId: number, nombre: string, ccaa: string | null, titular: string | null) {
   const sql = await db();
-  await sql`update erp_usuarios set pass_hash = ${nuevoHash}, debe_cambiar = false, version = version + 1 where id = ${id}`;
+  const r = await sql<{ id: number }>`insert into erp_farmacias (asesoria_id, nombre, ccaa, titular) values (${asesoriaId}, ${nombre}, ${ccaa}, ${titular}) returning id`;
+  return r[0]!.id;
+}
+export async function estadoFarmacia(id: number, asesoriaId: number, activa: boolean) {
+  const sql = await db();
+  await sql`update erp_farmacias set activa = ${activa} where id = ${id} and asesoria_id = ${asesoriaId}`;
+}
+export async function datosFarmacia(farmaciaId: number): Promise<FilaMes[]> {
+  const sql = await db();
+  return sql<FilaMes>`select periodo, ventas::float8 as ventas, compras::float8 as compras, personal::float8 as personal, alquiler::float8 as alquiler, otros::float8 as otros from erp_datos_mensuales where farmacia_id = ${farmaciaId} order by periodo`;
+}
+export async function importarDatos(farmaciaId: number, filas: FilaMes[]) {
+  const sql = await db();
+  for (const f of filas) {
+    await sql`insert into erp_datos_mensuales (farmacia_id, periodo, ventas, compras, personal, alquiler, otros)
+      values (${farmaciaId}, ${f.periodo}, ${f.ventas}, ${f.compras}, ${f.personal}, ${f.alquiler}, ${f.otros})
+      on conflict (farmacia_id, periodo) do update set ventas = excluded.ventas, compras = excluded.compras, personal = excluded.personal, alquiler = excluded.alquiler, otros = excluded.otros, actualizado = now()`;
+  }
+}
+export async function borrarMes(farmaciaId: number, periodo: string) {
+  const sql = await db();
+  await sql`delete from erp_datos_mensuales where farmacia_id = ${farmaciaId} and periodo = ${periodo}`;
 }
 
 export async function planAsesoria(id: number, plan: "gratis" | "premium") {
@@ -129,88 +188,55 @@ export async function planAsesoria(id: number, plan: "gratis" | "premium") {
   await auditar(null, id, "plan_asesoria", plan);
 }
 
-export async function listarFarmacias(asesoriaId: number, soloId: number | null) {
-  const sql = await db();
-  if (soloId) {
-    return sql<FarmaciaFila>`select f.id, f.nombre, f.ccaa, f.titular, f.activa, (select count(*) from erp_datos_mensuales d where d.farmacia_id = f.id) as meses from erp_farmacias f where f.asesoria_id = ${asesoriaId} and f.id = ${soloId}`;
-  }
-  return sql<FarmaciaFila>`select f.id, f.nombre, f.ccaa, f.titular, f.activa, (select count(*) from erp_datos_mensuales d where d.farmacia_id = f.id) as meses from erp_farmacias f where f.asesoria_id = ${asesoriaId} order by f.nombre`;
-}
-
-export async function farmaciaDe(id: number, asesoriaId: number) {
-  const sql = await db();
-  const r = await sql`select id from erp_farmacias where id = ${id} and asesoria_id = ${asesoriaId}`;
-  return r[0] ?? null;
-}
-
-export async function crearFarmacia(asesoriaId: number, nombre: string, ccaa: string | null, titular: string | null) {
-  const sql = await db();
-  const r = await sql<{ id: number }>`insert into erp_farmacias (asesoria_id, nombre, ccaa, titular) values (${asesoriaId}, ${nombre}, ${ccaa}, ${titular}) returning id`;
-  return r[0]!.id;
-}
-
-export async function estadoFarmacia(id: number, asesoriaId: number, activa: boolean) {
-  const sql = await db();
-  await sql`update erp_farmacias set activa = ${activa} where id = ${id} and asesoria_id = ${asesoriaId}`;
-}
-
-export async function datosFarmacia(farmaciaId: number): Promise<FilaMes[]> {
-  const sql = await db();
-  return sql<FilaMes>`select periodo, ventas, compras, personal, alquiler, otros from erp_datos_mensuales where farmacia_id = ${farmaciaId} order by periodo desc`;
-}
-
-export async function importarDatos(farmaciaId: number, filas: FilaMes[]) {
-  const sql = await db();
-  for (const f of filas) {
-    await sql`insert into erp_datos_mensuales (farmacia_id, periodo, ventas, compras, personal, alquiler, otros) values (${farmaciaId}, ${f.periodo}, ${f.ventas}, ${f.compras}, ${f.personal}, ${f.alquiler}, ${f.otros})
-      on conflict (farmacia_id, periodo) do update set ventas = excluded.ventas, compras = excluded.compras, personal = excluded.personal, alquiler = excluded.alquiler, otros = excluded.otros, actualizado = now()`;
-  }
-}
-
-export async function borrarMes(farmaciaId: number, periodo: string) {
-  const sql = await db();
-  await sql`delete from erp_datos_mensuales where farmacia_id = ${farmaciaId} and periodo = ${periodo}`;
-}
+export type ConversacionFila = { id: number; titulo: string; actualizado: string };
+export type ConversacionDetalle = ConversacionFila & { resumen: string | null; resumido_hasta: number };
+export type MensajeFila = { id: number; rol: "user" | "assistant"; contenido: string; adjuntos: string | null; creado: string };
 
 export async function listarConversaciones(usuarioId: number) {
   const sql = await db();
-  return sql`select id, titulo, creado, actualizado from erp_conversaciones where usuario_id = ${usuarioId} order by actualizado desc limit 50`;
+  return sql<ConversacionFila>`select id, titulo, actualizado from erp_conversaciones where usuario_id = ${usuarioId} order by actualizado desc limit 100`;
 }
-
+export async function conversacionDe(id: number, usuarioId: number): Promise<ConversacionDetalle | null> {
+  const sql = await db();
+  const r = await sql<ConversacionDetalle>`select id, titulo, actualizado, resumen, resumido_hasta from erp_conversaciones where id = ${id} and usuario_id = ${usuarioId}`;
+  return r[0] ?? null;
+}
 export async function crearConversacion(usuarioId: number, titulo: string) {
   const sql = await db();
   const r = await sql<{ id: number }>`insert into erp_conversaciones (usuario_id, titulo) values (${usuarioId}, ${titulo}) returning id`;
   return r[0]!.id;
 }
-
 export async function mensajesDe(conversacionId: number, ultimos = 200) {
   const sql = await db();
-  return sql`select id, rol, contenido, adjuntos, creado from erp_mensajes where conversacion_id = ${conversacionId} order by id desc limit ${ultimos}`;
+  return sql<MensajeFila>`select id, rol, contenido, adjuntos, creado from (select id, rol, contenido, adjuntos, creado from erp_mensajes where conversacion_id = ${conversacionId} order by id desc limit ${ultimos}) t order by id`;
 }
-
+export async function mensajesDesde(conversacionId: number, desdeId: number, limite = 400) {
+  const sql = await db();
+  return sql<MensajeFila>`select id, rol, contenido, adjuntos, creado from (select id, rol, contenido, adjuntos, creado from erp_mensajes where conversacion_id = ${conversacionId} and id > ${desdeId} order by id desc limit ${limite}) t order by id`;
+}
 export async function guardarMensaje(conversacionId: number, rol: "user" | "assistant", contenido: string, adjuntos: string | null) {
   const sql = await db();
   await sql`insert into erp_mensajes (conversacion_id, rol, contenido, adjuntos) values (${conversacionId}, ${rol}, ${contenido}, ${adjuntos})`;
   await sql`update erp_conversaciones set actualizado = now() where id = ${conversacionId}`;
 }
-
+export async function guardarResumen(conversacionId: number, resumen: string, hastaId: number) {
+  const sql = await db();
+  await sql`update erp_conversaciones set resumen = ${resumen}, resumido_hasta = ${hastaId} where id = ${conversacionId}`;
+}
 export async function borrarConversacion(id: number, usuarioId: number) {
   const sql = await db();
   await sql`delete from erp_conversaciones where id = ${id} and usuario_id = ${usuarioId}`;
 }
-
 export async function mensajesHoy(usuarioId: number): Promise<number> {
   const sql = await db();
-  const r = await sql<{ n: number }>`select count(*)::int as n from erp_mensajes m join erp_conversaciones c on c.id = m.conversacion_id where c.usuario_id = ${usuarioId} and m.creado::date = current_date and m.rol = 'user'`;
+  const r = await sql<{ n: number }>`select count(*) as n from erp_mensajes m join erp_conversaciones c on c.id = m.conversacion_id where c.usuario_id = ${usuarioId} and m.rol = 'user' and m.creado > now() - interval '24 hours'`;
   return r[0]?.n ?? 0;
 }
-
 export async function archivosUsados(usuarioId: number): Promise<{ usados: number; masAntiguo: string | null }> {
   const sql = await db();
-  const r = await sql<{ usados: number; mas_antiguo: string | null }>`select count(*)::int as usados, min(ts)::text as mas_antiguo from erp_archivos_uso where usuario_id = ${usuarioId} and ts > now() - interval '24 hours'`;
-  return { usados: r[0]?.usados ?? 0, masAntiguo: r[0]?.mas_antiguo ?? null };
+  const r = await sql<{ usados: number; antiguo: string | null }>`select count(*) as usados, min(ts) as antiguo from erp_archivos_uso where usuario_id = ${usuarioId} and ts > now() - interval '12 hours'`;
+  return { usados: r[0]?.usados ?? 0, masAntiguo: r[0]?.antiguo ?? null };
 }
-
 export async function registrarArchivos(usuarioId: number, items: { nombre: string; tipo: string; tam: number }[]) {
   const sql = await db();
   for (const a of items) await sql`insert into erp_archivos_uso (usuario_id, nombre, tipo, tam) values (${usuarioId}, ${a.nombre}, ${a.tipo}, ${a.tam})`;
