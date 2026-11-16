@@ -241,3 +241,28 @@ export async function registrarArchivos(usuarioId: number, items: { nombre: stri
   const sql = await db();
   for (const a of items) await sql`insert into erp_archivos_uso (usuario_id, nombre, tipo, tam) values (${usuarioId}, ${a.nombre}, ${a.tipo}, ${a.tam})`;
 }
+
+export type AuditoriaFila = {
+  id: number;
+  ts: string;
+  usuario_id: number | null;
+  asesoria_id: number | null;
+  accion: string;
+  detalle: string | null;
+  usuario_email: string | null;
+  asesoria_nombre: string | null;
+};
+
+/** Últimos eventos de auditoría de accesos y gestión ERP. */
+export async function listarAuditoria(limite = 100): Promise<AuditoriaFila[]> {
+  const sql = await db();
+  const lim = Math.min(Math.max(Number(limite) || 100, 1), 500);
+  return sql<AuditoriaFila>`
+    select a.id, a.ts, a.usuario_id, a.asesoria_id, a.accion, a.detalle,
+      u.email as usuario_email, s.nombre as asesoria_nombre
+    from erp_auditoria a
+    left join erp_usuarios u on u.id = a.usuario_id
+    left join erp_asesorias s on s.id = a.asesoria_id
+    order by a.ts desc
+    limit ${lim}`;
+}
