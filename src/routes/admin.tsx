@@ -12,7 +12,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 const campo =
-  "h-10 rounded-md border border-line bg-bg px-3 text-sm text-ink outline-none focus:border-teal";
+  "h-10 rounded-md border border-line bg-bg px-3 text-sm text-ink outline-none focus:border-teal w-full";
 
 async function llamar(method: "GET" | "POST", body?: Record<string, unknown>, query = "") {
   const res = await fetch(`/api/admin${query}`, {
@@ -29,14 +29,29 @@ async function llamar(method: "GET" | "POST", body?: Record<string, unknown>, qu
   return { ok: res.ok, status: res.status, json };
 }
 
+type Asesoria = {
+  id: number;
+  nombre: string;
+  activa: boolean;
+  plan: string;
+  admin_email: string | null;
+  farmacias: number;
+  usuarios: number;
+};
+
 function AdminPage() {
   const [fase, setFase] = useState<"cargando" | "login" | "panel" | "error">("cargando");
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [erpActivo, setErpActivo] = useState(false);
-  const [asesorias, setAsesorias] = useState<
-    { id: number; nombre: string; activa: boolean; plan: string; admin_email: string | null; farmacias: number; usuarios: number }[]
-  >([]);
+  const [asesorias, setAsesorias] = useState<Asesoria[]>([]);
+
+  const [nombreAsesoria, setNombreAsesoria] = useState("");
+  const [emailAdmin, setEmailAdmin] = useState("");
+  const [nombreAdmin, setNombreAdmin] = useState("");
+  const [creando, setCreando] = useState(false);
+  const [passTemporal, setPassTemporal] = useState<string | null>(null);
+  const [emailCreado, setEmailCreado] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     const r = await llamar("GET");
@@ -46,7 +61,7 @@ function AdminPage() {
       return setFase("error");
     }
     setErpActivo(!!r.json.erpActivo);
-    setAsesorias((r.json.asesorias as typeof asesorias) ?? []);
+    setAsesorias((r.json.asesorias as Asesoria[]) ?? []);
     setFase("panel");
   }, []);
 
@@ -63,6 +78,39 @@ function AdminPage() {
     }
     setPassword("");
     await cargar();
+  }
+
+  async function crearAsesoria() {
+    setMensaje(null);
+    setPassTemporal(null);
+    setEmailCreado(null);
+    if (!nombreAsesoria.trim() || !emailAdmin.trim() || !nombreAdmin.trim()) {
+      setMensaje("Rellena nombre de asesoría, email y nombre del admin.");
+      return;
+    }
+    setCreando(true);
+    try {
+      const r = await llamar("POST", {
+        accion: "crear_asesoria",
+        nombre: nombreAsesoria.trim(),
+        email: emailAdmin.trim().toLowerCase(),
+        adminNombre: nombreAdmin.trim(),
+      });
+      if (!r.ok) {
+        setMensaje((r.json.error as string) ?? "No se pudo crear la asesoría (¿email ya existe?).");
+        return;
+      }
+      const pass = (r.json.passwordTemporal as string) ?? null;
+      setPassTemporal(pass);
+      setEmailCreado(emailAdmin.trim().toLowerCase());
+      setNombreAsesoria("");
+      setEmailAdmin("");
+      setNombreAdmin("");
+      setMensaje("Asesoría creada. Guarda la contraseña temporal.");
+      await cargar();
+    } finally {
+      setCreando(false);
+    }
   }
 
   if (fase === "cargando") return <div className="min-h-dvh bg-bg" aria-busy="true" />;
@@ -89,7 +137,7 @@ function AdminPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Contraseña de administración"
                 autoComplete="current-password"
-                className={`${campo} w-full`}
+                className={campo}
               />
               {mensaje ? <p className="text-sm text-danger">{mensaje}</p> : null}
               <Button type="submit" className="w-full" disabled={!password}>
@@ -120,21 +168,67 @@ function AdminPage() {
           <LogOut className="size-4" /> Cerrar sesión
         </Button>
       </header>
-      <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+
+      <main className="mx-auto max-w-xl space-y-8 px-4 py-8">
         <p className="text-sm text-muted">
-          Panel restaurado (versión estable). ERP: {erpActivo ? "activo" : "apagado"}.
+          ERP: {erpActivo ? "activo" : "apagado"}. Usa este panel para crear la cuenta de prueba.
         </p>
+
+        {mensaje ? <p className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink">{mensaje}</p> : null}
+
+        {passTemporal ? (
+          <div className="rounded-xl border border-teal/40 bg-surface p-4 space-y-2">
+            <p className="font-medium text-ink">Cuenta lista para probar</p>
+            <p className="text-sm text-muted">
+              Email / usuario: <strong className="text-ink">{emailCreado}</strong>
+            </p>
+            <p className="text-sm text-muted">
+              Contraseña temporal:{" "}
+              <code className="rounded bg-bg px-2 py-0.5 text-ink font-mono text-base">{passTemporal}</code>
+            </p>
+            <p className="text-xs text-muted">
+              Entra en <a className="text-teal underline" href="/login">/login</a> con modo cuenta.
+            </p>
+          </div>
+        ) : null}
+
+        <section className="space-y-3 rounded-xl border border-line bg-surface p-4">
+          <h2 className="font-display text-xl font-semibold text-ink">Crear asesoría + admin</h2>
+          <input
+            className={campo}
+            placeholder="Nombre de la asesoría"
+            value={nombreAsesoria}
+            onChange={(e) => setNombreAsesoria(e.target.value)}
+          />
+          <input
+            className={campo}
+            type="email"
+            placeholder="Email del admin (login)"
+            value={emailAdmin}
+            onChange={(e) => setEmailAdmin(e.target.value)}
+          />
+          <input
+            className={campo}
+            placeholder="Nombre del admin"
+            value={nombreAdmin}
+            onChange={(e) => setNombreAdmin(e.target.value)}
+          />
+          <Button type="button" disabled={creando} onClick={() => void crearAsesoria()} className="w-full">
+            {creando ? "Creando…" : "Crear y generar contraseña"}
+          </Button>
+        </section>
+
         <section className="space-y-3">
           <h2 className="font-display text-xl font-semibold text-ink">Asesorías</h2>
           {asesorias.length === 0 ? (
-            <p className="text-sm text-muted">Aún no hay asesorías o ERP no está activo.</p>
+            <p className="text-sm text-muted">Aún no hay asesorías.</p>
           ) : (
             <ul className="space-y-2">
               {asesorias.map((a) => (
                 <li key={a.id} className="rounded-lg border border-line bg-surface p-3 text-sm">
                   <span className="font-medium text-ink">{a.nombre}</span>
                   <span className="ml-2 text-muted">
-                    {a.plan} · {a.usuarios} usuarios · {a.admin_email}
+                    {a.plan} · {a.usuarios} usuarios · {a.admin_email ?? "sin email"}
                   </span>
                 </li>
               ))}
