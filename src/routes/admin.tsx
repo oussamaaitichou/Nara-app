@@ -1,8 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { LogOut } from "lucide-react";
 import { NaraMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
+import {
+  adminLoginSchema,
+  crearAsesoriaSchema,
+  type AdminLoginInput,
+  type CrearAsesoriaInput,
+} from "@/lib/auth/forms";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -13,8 +21,7 @@ export const Route = createFileRoute("/admin")({
 
 const campo =
   "h-10 rounded-md border border-line bg-bg px-3 text-sm text-ink outline-none focus:border-teal w-full";
-
-const EMAIL_OK = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
+const errorCls = "text-xs text-danger";
 
 async function llamar(method: "GET" | "POST", body?: Record<string, unknown>, query = "") {
   const res = await fetch(`/api/admin${query}`, {
@@ -44,16 +51,20 @@ type Asesoria = {
 function AdminPage() {
   const [fase, setFase] = useState<"cargando" | "login" | "panel" | "error">("cargando");
   const [mensaje, setMensaje] = useState<string | null>(null);
-  const [password, setPassword] = useState("");
   const [erpActivo, setErpActivo] = useState(false);
   const [asesorias, setAsesorias] = useState<Asesoria[]>([]);
-
-  const [nombreAsesoria, setNombreAsesoria] = useState("");
-  const [emailAdmin, setEmailAdmin] = useState("");
-  const [nombreAdmin, setNombreAdmin] = useState("");
-  const [creando, setCreando] = useState(false);
   const [passTemporal, setPassTemporal] = useState<string | null>(null);
   const [emailCreado, setEmailCreado] = useState<string | null>(null);
+
+  const loginForm = useForm<AdminLoginInput>({
+    resolver: zodResolver(adminLoginSchema),
+    defaultValues: { password: "" },
+  });
+
+  const altaForm = useForm<CrearAsesoriaInput>({
+    resolver: zodResolver(crearAsesoriaSchema),
+    defaultValues: { nombre: "", adminEmail: "", adminNombre: "" },
+  });
 
   const cargar = useCallback(async () => {
     const r = await llamar("GET");
@@ -71,63 +82,36 @@ function AdminPage() {
     void cargar();
   }, [cargar]);
 
-  async function login() {
+  async function onLogin(data: AdminLoginInput) {
     setMensaje(null);
-    if (password.length < 8) {
-      setMensaje("La contraseña de admin debe tener al menos 8 caracteres.");
-      return;
-    }
-    const r = await llamar("POST", { accion: "login", password });
+    const r = await llamar("POST", { accion: "login", password: data.password });
     if (!r.ok) {
       setMensaje((r.json.error as string) ?? "No se ha podido iniciar sesión.");
       return;
     }
-    setPassword("");
+    loginForm.reset();
     await cargar();
   }
 
-  function validarAlta(): string | null {
-    const nombre = nombreAsesoria.trim();
-    const email = emailAdmin.trim().toLowerCase();
-    const admin = nombreAdmin.trim();
-    if (nombre.length < 2) return "El nombre de la asesoría debe tener al menos 2 caracteres.";
-    if (admin.length < 2) return "El nombre del admin debe tener al menos 2 caracteres.";
-    if (!EMAIL_OK.test(email)) return "Indica un email válido (ej. nombre@dominio.com).";
-    return null;
-  }
-
-  async function crearAsesoria() {
+  async function onCrear(data: CrearAsesoriaInput) {
     setMensaje(null);
     setPassTemporal(null);
     setEmailCreado(null);
-    const error = validarAlta();
-    if (error) {
-      setMensaje(error);
+    const r = await llamar("POST", {
+      accion: "crear_asesoria",
+      nombre: data.nombre,
+      adminEmail: data.adminEmail,
+      adminNombre: data.adminNombre,
+    });
+    if (!r.ok) {
+      setMensaje((r.json.error as string) ?? "No se pudo crear la asesoría.");
       return;
     }
-    setCreando(true);
-    try {
-      const r = await llamar("POST", {
-        accion: "crear_asesoria",
-        nombre: nombreAsesoria.trim(),
-        adminEmail: emailAdmin.trim().toLowerCase(),
-        adminNombre: nombreAdmin.trim(),
-      });
-      if (!r.ok) {
-        setMensaje((r.json.error as string) ?? "No se pudo crear la asesoría.");
-        return;
-      }
-      const pass = (r.json.passwordTemporal as string) ?? null;
-      setPassTemporal(pass);
-      setEmailCreado(emailAdmin.trim().toLowerCase());
-      setNombreAsesoria("");
-      setEmailAdmin("");
-      setNombreAdmin("");
-      setMensaje("Asesoría creada. Guarda la contraseña temporal.");
-      await cargar();
-    } finally {
-      setCreando(false);
-    }
+    setPassTemporal((r.json.passwordTemporal as string) ?? null);
+    setEmailCreado(data.adminEmail);
+    altaForm.reset();
+    setMensaje("Asesoría creada. Guarda la contraseña temporal.");
+    await cargar();
   }
 
   if (fase === "cargando") return <div className="min-h-dvh bg-bg" aria-busy="true" />;
@@ -137,10 +121,8 @@ function AdminPage() {
       <div className="flex min-h-dvh items-center justify-center bg-bg px-4">
         <form
           className="w-full max-w-sm space-y-4 rounded-xl border border-line bg-surface p-6 shadow-[var(--shadow-soft)]"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void login();
-          }}
+          onSubmit={loginForm.handleSubmit((d) => void onLogin(d))}
+          noValidate
         >
           <NaraMark className="size-10" />
           <h1 className="font-display text-2xl font-semibold text-ink">Panel del piloto</h1>
@@ -148,18 +130,20 @@ function AdminPage() {
             <p className="text-sm text-danger">{mensaje}</p>
           ) : (
             <>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Contraseña de administración"
-                autoComplete="current-password"
-                className={campo}
-                minLength={8}
-                required
-              />
+              <div className="space-y-1">
+                <input
+                  type="password"
+                  placeholder="Contraseña de administración"
+                  autoComplete="current-password"
+                  className={campo}
+                  {...loginForm.register("password")}
+                />
+                {loginForm.formState.errors.password ? (
+                  <p className={errorCls}>{loginForm.formState.errors.password.message}</p>
+                ) : null}
+              </div>
               {mensaje ? <p className="text-sm text-danger">{mensaje}</p> : null}
-              <Button type="submit" className="w-full" disabled={password.length < 8}>
+              <Button type="submit" className="w-full" disabled={loginForm.formState.isSubmitting}>
                 Entrar
               </Button>
             </>
@@ -190,59 +174,61 @@ function AdminPage() {
 
       <main className="mx-auto max-w-xl space-y-8 px-4 py-8">
         <p className="text-sm text-muted">
-          ERP: {erpActivo ? "activo" : "apagado"}. Crea la cuenta de prueba y usa la contraseña temporal en /login.
+          ERP: {erpActivo ? "activo" : "apagado"}. Validación con Zod + react-hook-form.
         </p>
 
         {mensaje ? <p className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink">{mensaje}</p> : null}
 
         {passTemporal ? (
-          <div className="rounded-xl border border-teal/40 bg-surface p-4 space-y-2">
+          <div className="space-y-2 rounded-xl border border-teal/40 bg-surface p-4">
             <p className="font-medium text-ink">Cuenta lista para probar</p>
             <p className="text-sm text-muted">
               Email / usuario: <strong className="text-ink">{emailCreado}</strong>
             </p>
             <p className="text-sm text-muted">
               Contraseña temporal:{" "}
-              <code className="rounded bg-bg px-2 py-0.5 text-ink font-mono text-base">{passTemporal}</code>
+              <code className="rounded bg-bg px-2 py-0.5 font-mono text-base text-ink">{passTemporal}</code>
             </p>
             <p className="text-xs text-muted">
-              Entra en <a className="text-teal underline" href="/login">/login</a> (modo cuenta).
+              Entra en{" "}
+              <a className="text-teal underline" href="/login">
+                /login
+              </a>{" "}
+              (modo cuenta).
             </p>
           </div>
         ) : null}
 
         <section className="space-y-3 rounded-xl border border-line bg-surface p-4">
           <h2 className="font-display text-xl font-semibold text-ink">Crear asesoría + admin</h2>
-          <input
-            className={campo}
-            placeholder="Nombre de la asesoría (mín. 2)"
-            value={nombreAsesoria}
-            onChange={(e) => setNombreAsesoria(e.target.value)}
-            minLength={2}
-            maxLength={120}
-            required
-          />
-          <input
-            className={campo}
-            type="email"
-            placeholder="Email del admin (login)"
-            value={emailAdmin}
-            onChange={(e) => setEmailAdmin(e.target.value)}
-            maxLength={254}
-            required
-          />
-          <input
-            className={campo}
-            placeholder="Nombre del admin (mín. 2)"
-            value={nombreAdmin}
-            onChange={(e) => setNombreAdmin(e.target.value)}
-            minLength={2}
-            maxLength={120}
-            required
-          />
-          <Button type="button" disabled={creando} onClick={() => void crearAsesoria()} className="w-full">
-            {creando ? "Creando…" : "Crear y generar contraseña"}
-          </Button>
+          <form className="space-y-3" onSubmit={altaForm.handleSubmit((d) => void onCrear(d))} noValidate>
+            <div className="space-y-1">
+              <input className={campo} placeholder="Nombre de la asesoría" {...altaForm.register("nombre")} />
+              {altaForm.formState.errors.nombre ? (
+                <p className={errorCls}>{altaForm.formState.errors.nombre.message}</p>
+              ) : null}
+            </div>
+            <div className="space-y-1">
+              <input
+                className={campo}
+                type="email"
+                placeholder="Email del admin (login)"
+                {...altaForm.register("adminEmail")}
+              />
+              {altaForm.formState.errors.adminEmail ? (
+                <p className={errorCls}>{altaForm.formState.errors.adminEmail.message}</p>
+              ) : null}
+            </div>
+            <div className="space-y-1">
+              <input className={campo} placeholder="Nombre del admin" {...altaForm.register("adminNombre")} />
+              {altaForm.formState.errors.adminNombre ? (
+                <p className={errorCls}>{altaForm.formState.errors.adminNombre.message}</p>
+              ) : null}
+            </div>
+            <Button type="submit" className="w-full" disabled={altaForm.formState.isSubmitting}>
+              {altaForm.formState.isSubmitting ? "Creando…" : "Crear y generar contraseña"}
+            </Button>
+          </form>
         </section>
 
         <section className="space-y-3">
