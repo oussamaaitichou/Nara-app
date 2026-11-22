@@ -1,9 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, KeyRound, Loader2, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import { NaraMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { rutaPorPlan } from "@/lib/acceso-plan";
+import {
+  loginCodigoSchema,
+  loginCuentaSchema,
+  type LoginCodigoInput,
+  type LoginCuentaInput,
+} from "@/lib/auth/forms";
 
 export const Route = createFileRoute("/login")({
   component: AccesoPage,
@@ -23,10 +31,16 @@ function AccesoPage() {
   const navigate = useNavigate();
   const [estado, setEstado] = useState<EstadoAcceso>({ fase: "cargando" });
   const [modo, setModo] = useState<"cuenta" | "codigo">("cuenta");
-  const [identificador, setIdentificador] = useState("");
-  const [password, setPassword] = useState("");
-  const [codigo, setCodigo] = useState("");
   const [enviando, setEnviando] = useState(false);
+
+  const cuentaForm = useForm<LoginCuentaInput>({
+    resolver: zodResolver(loginCuentaSchema),
+    defaultValues: { identificador: "", password: "" },
+  });
+  const codigoForm = useForm<LoginCodigoInput>({
+    resolver: zodResolver(loginCodigoSchema),
+    defaultValues: { codigo: "" },
+  });
 
   useEffect(() => {
     void comprobar();
@@ -79,15 +93,17 @@ function AccesoPage() {
     }
   }
 
-  async function entrarCuenta(e: React.FormEvent) {
-    e.preventDefault();
-    if (!identificador.trim() || !password || enviando) return;
+  async function entrarCuenta(data: LoginCuentaInput) {
+    if (enviando) return;
     setEnviando(true);
     try {
       const res = await fetch("/api/login-cuenta", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identificador: identificador.trim(), password }),
+        body: JSON.stringify({
+          identificador: data.identificador,
+          password: data.password,
+        }),
       });
       const json = (await res.json()) as {
         error?: string;
@@ -107,15 +123,14 @@ function AccesoPage() {
     }
   }
 
-  async function entrarCodigo(e: React.FormEvent) {
-    e.preventDefault();
-    if (!codigo.trim() || enviando) return;
+  async function entrarCodigo(data: LoginCodigoInput) {
+    if (enviando) return;
     setEnviando(true);
     try {
       const res = await fetch("/api/acceso", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ codigo: codigo.trim() }),
+        body: JSON.stringify({ codigo: data.codigo }),
       });
       const json = (await res.json()) as { ok?: boolean; plan?: string; error?: string };
       if (!res.ok) {
@@ -138,9 +153,8 @@ function AccesoPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ accion: "logout" }),
     });
-    setCodigo("");
-    setIdentificador("");
-    setPassword("");
+    codigoForm.reset();
+    cuentaForm.reset();
     setEstado({ fase: "formulario" });
   }
 
@@ -171,9 +185,7 @@ function AccesoPage() {
                 type="button"
                 onClick={() => setModo("cuenta")}
                 className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold transition ${
-                  modo === "cuenta"
-                    ? "nara-thermal shadow-sm"
-                    : "text-[var(--color-muted)]"
+                  modo === "cuenta" ? "nara-thermal shadow-sm" : "text-[var(--color-muted)]"
                 }`}
               >
                 Usuario y contraseña
@@ -182,9 +194,7 @@ function AccesoPage() {
                 type="button"
                 onClick={() => setModo("codigo")}
                 className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold transition ${
-                  modo === "codigo"
-                    ? "nara-thermal shadow-sm"
-                    : "text-[var(--color-muted)]"
+                  modo === "codigo" ? "nara-thermal shadow-sm" : "text-[var(--color-muted)]"
                 }`}
               >
                 Código piloto
@@ -192,7 +202,11 @@ function AccesoPage() {
             </div>
 
             {modo === "cuenta" ? (
-              <form className="space-y-4" onSubmit={(e) => void entrarCuenta(e)}>
+              <form
+                className="space-y-4"
+                onSubmit={cuentaForm.handleSubmit((d) => void entrarCuenta(d))}
+                noValidate
+              >
                 <p className="text-sm leading-relaxed text-[var(--color-muted)]">
                   Introduce el <strong className="text-[var(--color-ink)]">usuario</strong> (nombre o email) y la{" "}
                   <strong className="text-[var(--color-ink)]">contraseña</strong> que te ha asignado el administrador.
@@ -203,32 +217,35 @@ function AccesoPage() {
                     <UserRound className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--color-subtle)]" />
                     <input
                       type="text"
-                      value={identificador}
-                      onChange={(e) => setIdentificador(e.target.value)}
                       placeholder="Nombre, DNI o email"
                       autoComplete="username"
-                      autoFocus
                       className={`${campo} pl-10`}
+                      {...cuentaForm.register("identificador")}
                     />
                   </div>
+                  {cuentaForm.formState.errors.identificador ? (
+                    <p className="text-xs text-[var(--color-danger)]">
+                      {cuentaForm.formState.errors.identificador.message}
+                    </p>
+                  ) : null}
                 </label>
                 <label className="block space-y-1.5">
                   <span className="text-sm font-medium text-[var(--color-ink-soft)]">Contraseña</span>
                   <input
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Tu contraseña"
+                    placeholder="••••••••"
                     autoComplete="current-password"
                     className={campo}
+                    {...cuentaForm.register("password")}
                   />
+                  {cuentaForm.formState.errors.password ? (
+                    <p className="text-xs text-[var(--color-danger)]">
+                      {cuentaForm.formState.errors.password.message}
+                    </p>
+                  ) : null}
                 </label>
                 {estado.error ? <p className="text-sm text-[var(--color-danger)]">{estado.error}</p> : null}
-                <Button
-                  type="submit"
-                  className="nara-thermal w-full rounded-full border-0"
-                  disabled={!identificador.trim() || !password || enviando}
-                >
+                <Button type="submit" className="nara-thermal w-full rounded-full border-0" disabled={enviando}>
                   {enviando ? (
                     <>
                       <Loader2 className="size-4 animate-spin" /> Entrando…
@@ -239,7 +256,11 @@ function AccesoPage() {
                 </Button>
               </form>
             ) : (
-              <form className="space-y-4" onSubmit={(e) => void entrarCodigo(e)}>
+              <form
+                className="space-y-4"
+                onSubmit={codigoForm.handleSubmit((d) => void entrarCodigo(d))}
+                noValidate
+              >
                 <p className="text-sm leading-relaxed text-[var(--color-muted)]">
                   Solo si te dieron un <strong className="text-[var(--color-ink)]">código de piloto</strong>.
                 </p>
@@ -249,20 +270,20 @@ function AccesoPage() {
                     <KeyRound className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--color-subtle)]" />
                     <input
                       type="text"
-                      value={codigo}
-                      onChange={(e) => setCodigo(e.target.value)}
                       placeholder="NARA-XXXXX-XXXXX"
                       autoComplete="one-time-code"
                       className={`${campo} pl-10`}
+                      {...codigoForm.register("codigo")}
                     />
                   </div>
+                  {codigoForm.formState.errors.codigo ? (
+                    <p className="text-xs text-[var(--color-danger)]">
+                      {codigoForm.formState.errors.codigo.message}
+                    </p>
+                  ) : null}
                 </label>
                 {estado.error ? <p className="text-sm text-[var(--color-danger)]">{estado.error}</p> : null}
-                <Button
-                  type="submit"
-                  className="nara-thermal w-full rounded-full border-0"
-                  disabled={!codigo.trim() || enviando}
-                >
+                <Button type="submit" className="nara-thermal w-full rounded-full border-0" disabled={enviando}>
                   {enviando ? (
                     <>
                       <Loader2 className="size-4 animate-spin" /> Entrando…
