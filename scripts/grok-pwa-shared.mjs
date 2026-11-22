@@ -1,6 +1,5 @@
 /**
- * Minimal platform PWA helpers for Vercel production (Nara).
- * Grok preview extensions disabled by default.
+ * Platform PWA helpers for Nara on Vercel. Extensions off unless VITE_GROK_EXTENSIONS=1.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -16,6 +15,15 @@ export function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function unescapeHtml(value) {
+  return String(value)
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&amp;", "&");
 }
 
 export function readGrokExtensionsEnabled() {
@@ -61,7 +69,7 @@ export function stripInstallParams(url) {
   return rest ? `${path}?${rest}` : path;
 }
 
-export function appNameFromHost(hostHeader) {
+export function appNameFromHost() {
   return DEFAULT_APP_NAME;
 }
 
@@ -71,8 +79,8 @@ export function renderInstallPageHtml(template, { host, url } = {}) {
     .replaceAll("{{APP_URL}}", escapeHtml(stripInstallParams(url)));
 }
 
-export function renderWebManifest(hostHeader) {
-  const name = appNameFromHost(hostHeader);
+export function renderWebManifest() {
+  const name = DEFAULT_APP_NAME;
   return JSON.stringify({
     name,
     short_name: name.slice(0, 12),
@@ -84,6 +92,35 @@ export function renderWebManifest(hostHeader) {
   });
 }
 
+export function readOgSite(cwd = process.cwd()) {
+  try {
+    const raw = readFileSync(join(cwd, OG_SITE_REL_PATH), "utf8");
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function ogCardPublicPath(cwd = process.cwd()) {
+  if (existsSync(join(cwd, "public/og.jpg"))) return "/og.jpg";
+  if (existsSync(join(cwd, "public/og.png"))) return "/og.png";
+  return "";
+}
+
+export function snapshotOgIdentity(cwd = process.cwd()) {
+  const site = { ...readOgSite(cwd) };
+  const disk = ogCardPublicPath(cwd);
+  if (disk) {
+    site.card = "custom";
+    site.image = disk;
+  }
+  if (existsSync(join(cwd, "public/x-banner.jpg"))) {
+    site.banner = site.banner || "/x-banner.jpg";
+  }
+  return { site };
+}
+
 export function stripGrokExtensionsScript(html) {
   return String(html).replace(
     /<script\b[^>]*\bsrc\s*=\s*["'][^"']*\/grok-app-builder\/extensions\.js[^"']*["'][^>]*>\s*<\/script>/gi,
@@ -91,20 +128,14 @@ export function stripGrokExtensionsScript(html) {
   );
 }
 
-export function injectGrokPwaHead(html, ctx = {}) {
-  let next = stripGrokExtensionsScript(String(html ?? ""));
-  // No Grok extensions in production by default
-  return next;
+export function injectGrokPwaHead(html) {
+  return stripGrokExtensionsScript(String(html ?? ""));
 }
 
-/**
- * Streaming head injector: buffers until </head>, then flushes rest.
- */
 export function createHeadInjector(ctx = {}) {
   let headDone = false;
   let buffer = Buffer.alloc(0);
   const marker = Buffer.from("</head>", "utf8");
-
   const apply = (html) => injectGrokPwaHead(html, ctx);
 
   return {
