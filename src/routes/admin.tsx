@@ -14,6 +14,8 @@ export const Route = createFileRoute("/admin")({
 const campo =
   "h-10 rounded-md border border-line bg-bg px-3 text-sm text-ink outline-none focus:border-teal w-full";
 
+const EMAIL_OK = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
+
 async function llamar(method: "GET" | "POST", body?: Record<string, unknown>, query = "") {
   const res = await fetch(`/api/admin${query}`, {
     method,
@@ -71,6 +73,10 @@ function AdminPage() {
 
   async function login() {
     setMensaje(null);
+    if (password.length < 8) {
+      setMensaje("La contraseña de admin debe tener al menos 8 caracteres.");
+      return;
+    }
     const r = await llamar("POST", { accion: "login", password });
     if (!r.ok) {
       setMensaje((r.json.error as string) ?? "No se ha podido iniciar sesión.");
@@ -80,12 +86,23 @@ function AdminPage() {
     await cargar();
   }
 
+  function validarAlta(): string | null {
+    const nombre = nombreAsesoria.trim();
+    const email = emailAdmin.trim().toLowerCase();
+    const admin = nombreAdmin.trim();
+    if (nombre.length < 2) return "El nombre de la asesoría debe tener al menos 2 caracteres.";
+    if (admin.length < 2) return "El nombre del admin debe tener al menos 2 caracteres.";
+    if (!EMAIL_OK.test(email)) return "Indica un email válido (ej. nombre@dominio.com).";
+    return null;
+  }
+
   async function crearAsesoria() {
     setMensaje(null);
     setPassTemporal(null);
     setEmailCreado(null);
-    if (!nombreAsesoria.trim() || !emailAdmin.trim() || !nombreAdmin.trim()) {
-      setMensaje("Rellena nombre de asesoría, email y nombre del admin.");
+    const error = validarAlta();
+    if (error) {
+      setMensaje(error);
       return;
     }
     setCreando(true);
@@ -93,11 +110,11 @@ function AdminPage() {
       const r = await llamar("POST", {
         accion: "crear_asesoria",
         nombre: nombreAsesoria.trim(),
-        email: emailAdmin.trim().toLowerCase(),
+        adminEmail: emailAdmin.trim().toLowerCase(),
         adminNombre: nombreAdmin.trim(),
       });
       if (!r.ok) {
-        setMensaje((r.json.error as string) ?? "No se pudo crear la asesoría (¿email ya existe?).");
+        setMensaje((r.json.error as string) ?? "No se pudo crear la asesoría.");
         return;
       }
       const pass = (r.json.passwordTemporal as string) ?? null;
@@ -138,9 +155,11 @@ function AdminPage() {
                 placeholder="Contraseña de administración"
                 autoComplete="current-password"
                 className={campo}
+                minLength={8}
+                required
               />
               {mensaje ? <p className="text-sm text-danger">{mensaje}</p> : null}
-              <Button type="submit" className="w-full" disabled={!password}>
+              <Button type="submit" className="w-full" disabled={password.length < 8}>
                 Entrar
               </Button>
             </>
@@ -171,7 +190,7 @@ function AdminPage() {
 
       <main className="mx-auto max-w-xl space-y-8 px-4 py-8">
         <p className="text-sm text-muted">
-          ERP: {erpActivo ? "activo" : "apagado"}. Usa este panel para crear la cuenta de prueba.
+          ERP: {erpActivo ? "activo" : "apagado"}. Crea la cuenta de prueba y usa la contraseña temporal en /login.
         </p>
 
         {mensaje ? <p className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink">{mensaje}</p> : null}
@@ -187,7 +206,7 @@ function AdminPage() {
               <code className="rounded bg-bg px-2 py-0.5 text-ink font-mono text-base">{passTemporal}</code>
             </p>
             <p className="text-xs text-muted">
-              Entra en <a className="text-teal underline" href="/login">/login</a> con modo cuenta.
+              Entra en <a className="text-teal underline" href="/login">/login</a> (modo cuenta).
             </p>
           </div>
         ) : null}
@@ -196,9 +215,12 @@ function AdminPage() {
           <h2 className="font-display text-xl font-semibold text-ink">Crear asesoría + admin</h2>
           <input
             className={campo}
-            placeholder="Nombre de la asesoría"
+            placeholder="Nombre de la asesoría (mín. 2)"
             value={nombreAsesoria}
             onChange={(e) => setNombreAsesoria(e.target.value)}
+            minLength={2}
+            maxLength={120}
+            required
           />
           <input
             className={campo}
@@ -206,12 +228,17 @@ function AdminPage() {
             placeholder="Email del admin (login)"
             value={emailAdmin}
             onChange={(e) => setEmailAdmin(e.target.value)}
+            maxLength={254}
+            required
           />
           <input
             className={campo}
-            placeholder="Nombre del admin"
+            placeholder="Nombre del admin (mín. 2)"
             value={nombreAdmin}
             onChange={(e) => setNombreAdmin(e.target.value)}
+            minLength={2}
+            maxLength={120}
+            required
           />
           <Button type="button" disabled={creando} onClick={() => void crearAsesoria()} className="w-full">
             {creando ? "Creando…" : "Crear y generar contraseña"}
